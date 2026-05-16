@@ -213,9 +213,60 @@ def inicializar_banco():
         );
     """)
 
+    cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS produtos (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome      TEXT    NOT NULL,
+            tipo      TEXT    CHECK(tipo IN ('produto', 'servico')) DEFAULT 'produto',
+            preco     REAL    NOT NULL DEFAULT 0.0,
+            descricao TEXT    DEFAULT '',
+            ativo     INTEGER DEFAULT 1,
+            criado_em TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS vendas (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            descricao      TEXT    DEFAULT '',
+            data_venda     TEXT    NOT NULL,
+            valor_total    REAL    NOT NULL DEFAULT 0.0,
+            desconto       REAL    NOT NULL DEFAULT 0.0,
+            valor_liquido  REAL    NOT NULL DEFAULT 0.0,
+            tipo_pagamento TEXT    CHECK(tipo_pagamento IN ('avista', 'aprazo')) DEFAULT 'avista',
+            status         TEXT    CHECK(status IN ('pendente', 'paga', 'parcial', 'cancelada')) DEFAULT 'pendente',
+            observacao     TEXT    DEFAULT '',
+            criado_em      TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS itens_venda (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            venda_id   INTEGER NOT NULL REFERENCES vendas(id),
+            produto_id INTEGER REFERENCES produtos(id),
+            descricao  TEXT    NOT NULL,
+            quantidade REAL    NOT NULL DEFAULT 1.0,
+            preco_unit REAL    NOT NULL,
+            subtotal   REAL    NOT NULL,
+            criado_em  TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS contas_a_receber (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            venda_id         INTEGER REFERENCES vendas(id),
+            descricao        TEXT    NOT NULL,
+            valor            REAL    NOT NULL,
+            data_vencimento  TEXT    NOT NULL,
+            data_recebimento TEXT,
+            status           TEXT    CHECK(status IN ('pendente', 'recebido', 'cancelado')) DEFAULT 'pendente',
+            numero_parcela   INTEGER DEFAULT 1,
+            total_parcelas   INTEGER DEFAULT 1,
+            observacao       TEXT    DEFAULT '',
+            criado_em        TEXT    NOT NULL
+        );
+    """)
+
     conn.commit()
     _migrar_plano_contas(conn)
     _migrar_fontes_receita(conn)
+    _migrar_tabelas_vendas(conn)
     _popular_contas_padrao(conn)
     _popular_fontes_padrao(conn)
     popular_dados_exemplo(conn)
@@ -247,6 +298,72 @@ def _migrar_fontes_receita(conn: sqlite3.Connection):
     for coluna, tipo in extras:
         if coluna not in colunas_existentes:
             conn.execute(f"ALTER TABLE fontes_receita ADD COLUMN {coluna} {tipo}")
+    conn.commit()
+
+
+def _migrar_tabelas_vendas(conn: sqlite3.Connection):
+    """Garante que as tabelas do módulo de vendas existam em bancos pré-existentes."""
+    tabelas_existentes = {
+        row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    if "produtos" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS produtos (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome      TEXT    NOT NULL,
+                tipo      TEXT    CHECK(tipo IN ('produto', 'servico')) DEFAULT 'produto',
+                preco     REAL    NOT NULL DEFAULT 0.0,
+                descricao TEXT    DEFAULT '',
+                ativo     INTEGER DEFAULT 1,
+                criado_em TEXT    NOT NULL
+            )
+        """)
+    if "vendas" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS vendas (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                descricao      TEXT    DEFAULT '',
+                data_venda     TEXT    NOT NULL,
+                valor_total    REAL    NOT NULL DEFAULT 0.0,
+                desconto       REAL    NOT NULL DEFAULT 0.0,
+                valor_liquido  REAL    NOT NULL DEFAULT 0.0,
+                tipo_pagamento TEXT    CHECK(tipo_pagamento IN ('avista', 'aprazo')) DEFAULT 'avista',
+                status         TEXT    CHECK(status IN ('pendente', 'paga', 'parcial', 'cancelada')) DEFAULT 'pendente',
+                observacao     TEXT    DEFAULT '',
+                criado_em      TEXT    NOT NULL
+            )
+        """)
+    if "itens_venda" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS itens_venda (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                venda_id   INTEGER NOT NULL REFERENCES vendas(id),
+                produto_id INTEGER REFERENCES produtos(id),
+                descricao  TEXT    NOT NULL,
+                quantidade REAL    NOT NULL DEFAULT 1.0,
+                preco_unit REAL    NOT NULL,
+                subtotal   REAL    NOT NULL,
+                criado_em  TEXT    NOT NULL
+            )
+        """)
+    if "contas_a_receber" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS contas_a_receber (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                venda_id         INTEGER REFERENCES vendas(id),
+                descricao        TEXT    NOT NULL,
+                valor            REAL    NOT NULL,
+                data_vencimento  TEXT    NOT NULL,
+                data_recebimento TEXT,
+                status           TEXT    CHECK(status IN ('pendente', 'recebido', 'cancelado')) DEFAULT 'pendente',
+                numero_parcela   INTEGER DEFAULT 1,
+                total_parcelas   INTEGER DEFAULT 1,
+                observacao       TEXT    DEFAULT '',
+                criado_em        TEXT    NOT NULL
+            )
+        """)
     conn.commit()
 
 
@@ -513,6 +630,10 @@ def zerar_dados():
             DELETE FROM receitas_especiais;
             DELETE FROM dividas;
             DELETE FROM backups;
+            DELETE FROM contas_a_receber;
+            DELETE FROM itens_venda;
+            DELETE FROM vendas;
+            DELETE FROM produtos;
         """)
         conn.execute("""
             DELETE FROM configuracoes
