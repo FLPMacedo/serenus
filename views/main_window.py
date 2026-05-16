@@ -5,11 +5,11 @@ Cada item da sidebar carrega a view correspondente no frame de conteúdo.
 """
 
 import customtkinter as ctk
-from pathlib import Path
 from config import get_tema, SIDEBAR_WIDTH, MIN_WIDTH, MIN_HEIGHT
 from database import obter_configuracao, salvar_configuracao
+from _paths import IMAGENS_DIR
 
-_LOGO_PATH = Path(__file__).parent.parent / "imagens" / "logo.png"
+_LOGO_PATH = IMAGENS_DIR / "logo.png"
 
 
 class MainWindow(ctk.CTk):

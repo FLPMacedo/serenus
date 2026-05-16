@@ -5,24 +5,50 @@
 
 ---
 
-## Funcionalidades
+## O que é o Serenus?
 
-| Módulo | Descrição |
+O **Serenus** é um software de finanças pessoais para Windows, pensado para quem quer
+controlar receitas, despesas, dívidas, investimentos e metas em um único lugar — sem
+depender de planilhas ou aplicativos online.
+
+Na primeira vez que abre, o app pede seu nome e configura o perfil.
+A partir daí, tudo fica salvo localmente no seu computador, de forma segura e privada.
+
+### Principais funcionalidades
+
+| Módulo | O que faz |
 |--------|-----------|
-| 💰 Minhas Receitas | Cadastro de fontes de renda e receitas especiais (13º, férias, bônus) |
-| 💸 Contas a Pagar | Registro e acompanhamento de despesas mensais com suporte a parcelamento no cartão |
-| 💳 Cartões | Controle de faturas e compras parceladas |
-| 📉 Dívidas | Projeção de evolução de empréstimos e financiamentos |
-| 📋 Plano de Contas | Categorização de despesas |
+| 💰 Minhas Receitas | Cadastro de salário, renda extra, 13º, férias e bônus |
+| 💸 Contas a Pagar | Registro de despesas mensais, parcelamento no cartão e recorrências |
+| 💳 Cartões | Controle de faturas, compras parceladas e limite disponível |
+| 📉 Dívidas | Projeção mês a mês da evolução de empréstimos e financiamentos |
+| 📋 Plano de Contas | Categorização personalizada de despesas |
 | 📊 Visão Financeira | Projeção de saldo para os próximos meses |
 | 🔄 Fluxo de Caixa | Resumo de receitas × despesas com gráficos |
 | 📈 Investimentos | Carteira de renda variável, fixa e fundos com cálculo de IR |
 | 🎯 Metas | Acompanhamento de objetivos financeiros com barra de progresso |
 | 💾 Backup | Backup e restauração local dos dados |
 
+### Destaques
+
+- **100% local** — banco de dados SQLite no seu computador, sem nuvem obrigatória
+- **Sem assinatura** — instala uma vez e usa para sempre
+- **Dados de demonstração** — 8 perfis prontos para explorar o sistema sem cadastrar nada
+- **Exportação Excel** — cada módulo gera `.xlsx` formatado com totais e cores
+- **Backup Google Drive** *(opcional)* — integração configurável para salvar na nuvem
+
 ---
 
-## Requisitos
+## Instalador disponível
+
+O executável e o instalador para Windows **não estão neste repositório**
+(são arquivos grandes gerados a partir deste código-fonte).
+
+**Se tiver interesse em obter o instalador compilado, entre em contato.**
+
+---
+
+## Requisitos para rodar pelo código-fonte
 
 - **Python 3.12+**
 - Dependências listadas em `requirements.txt`
@@ -62,7 +88,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Na primeira execução, o banco de dados `serenus.db` é criado automaticamente na raiz do projeto.
+Na primeira execução o app pergunta seu nome e cria o banco `serenus.db`
+automaticamente em `%APPDATA%\Serenus\` (Windows).
 
 ---
 
@@ -71,7 +98,7 @@ Na primeira execução, o banco de dados `serenus.db` é criado automaticamente 
 Para explorar o sistema sem precisar cadastrar dados manualmente:
 
 1. Abra o app → **Configurações → Dados de demonstração**
-2. Selecione um dos 8 perfis disponíveis (Padrão, Apertado, Investidor iniciante etc.)
+2. Selecione um dos 8 perfis disponíveis
 3. Clique em **Carregar perfil**
 
 ---
@@ -84,14 +111,15 @@ serenus/
 ├── main.py                   # Entry point
 ├── database.py               # Conexão SQLite, DDL e seed inicial
 ├── config.py                 # Constantes, temas e formatadores globais
+├── _paths.py                 # Resolução de caminhos (dev ↔ bundle PyInstaller)
 ├── demo_manager.py           # 8 perfis de dados de demonstração
-├── backup_manager.py         # Lógica de backup local e integração Google Drive
+├── backup_manager.py         # Lógica de backup local
 ├── google_drive.py           # Integração opcional com Google Drive
-├── pytest.ini                # Configuração dos testes
 ├── requirements.txt          # Dependências Python
 │
 ├── views/                    # Interface gráfica (CustomTkinter)
 │   ├── main_window.py        # Janela principal + roteamento de telas
+│   ├── setup_view.py         # Wizard de configuração inicial (primeiro acesso)
 │   ├── contas_pagar/         # Módulo Contas a Pagar
 │   ├── receitas/             # Módulo Minhas Receitas
 │   ├── cartoes/              # Módulo Cartões
@@ -106,9 +134,11 @@ serenus/
 │   └── configuracoes/        # Tela de configurações
 │
 ├── imagens/                  # Ícone e logos do app
+├── instalador/               # Script Inno Setup para geração do instalador
 ├── docs/                     # Documentação
 │   ├── MANUAL_USUARIO.md
-│   └── DOCUMENTACAO_TECNICA.md
+│   ├── DOCUMENTACAO_TECNICA.md
+│   └── BUILD.md              # Como gerar o executável e instalador
 │
 └── tests/                    # Testes automatizados (pytest)
 ```
@@ -125,27 +155,10 @@ Todos os testes usam banco em memória — nenhum dado real é afetado.
 
 ---
 
-## Exportação para Excel
+## Como gerar o instalador
 
-Cada módulo possui um botão **⬇ Excel** que gera arquivos `.xlsx` formatados com:
-- Cabeçalho estilizado
-- Linhas alternadas
-- Linha de totais
-- Coluna de valores em formato moeda brasileira
-
----
-
-## Integração com Google Drive *(opcional)*
-
-Para habilitar o backup automático no Google Drive:
-
-1. Acesse o [Google Cloud Console](https://console.cloud.google.com/)
-2. Crie um projeto e ative a **Google Drive API**
-3. Gere credenciais OAuth 2.0 e baixe o `client_secrets.json`
-4. Coloque o arquivo na raiz do projeto
-5. No app: **Backup → Configurar Google Drive**
-
-> ⚠️ Nunca versione o `client_secrets.json` ou `google_token.json` — eles estão no `.gitignore`.
+Consulte [`docs/BUILD.md`](docs/BUILD.md) para o passo a passo completo usando
+PyInstaller + Inno Setup.
 
 ---
 

@@ -4,12 +4,13 @@ Centraliza criação, migração e acesso ao banco de dados SQLite.
 """
 
 import sqlite3
-from pathlib import Path
 from datetime import datetime
 
-# Banco sempre ao lado do arquivo principal do app
-DIRETORIO_BASE = Path(__file__).parent
-CAMINHO_BANCO = DIRETORIO_BASE / "serenus.db"
+from _paths import DATABASE_PATH, DADOS
+
+# Compatível com execução normal e bundle PyInstaller
+CAMINHO_BANCO = DATABASE_PATH
+DADOS.mkdir(parents=True, exist_ok=True)
 
 
 def conectar() -> sqlite3.Connection:

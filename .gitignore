@@ -38,11 +38,12 @@ backups/
 # ─── Faturas geradas (PDFs com dados sensíveis) ───────────────────────────────
 faturas_modelos/
 
-# ─── PyInstaller ──────────────────────────────────────────────────────────────
+# ─── PyInstaller / empacotamento ─────────────────────────────────────────────
 dist/
 build/
 *.spec
 *.exe
+instalador/output/
 
 # ─── Ferramentas de build / empacotamento ─────────────────────────────────────
 *.egg-info/

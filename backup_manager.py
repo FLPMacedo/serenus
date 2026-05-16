@@ -11,9 +11,9 @@ from datetime import datetime, date, timedelta
 from typing import Optional
 
 from database import CAMINHO_BANCO, conectar, obter_configuracao, salvar_configuracao
+from _paths import BACKUPS_DIR
 
-DIRETORIO_BASE   = Path(__file__).parent
-PASTA_BACKUPS    = DIRETORIO_BASE / "backups"
+PASTA_BACKUPS      = BACKUPS_DIR
 MAX_BACKUPS_PADRAO = 30
 
 
@@ -22,7 +22,7 @@ MAX_BACKUPS_PADRAO = 30
 # ---------------------------------------------------------------------------
 
 def _pasta_backups() -> Path:
-    PASTA_BACKUPS.mkdir(exist_ok=True)
+    PASTA_BACKUPS.mkdir(parents=True, exist_ok=True)
     return PASTA_BACKUPS
 
 

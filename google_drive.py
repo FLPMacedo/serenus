@@ -12,9 +12,7 @@ import threading
 from pathlib import Path
 from typing import Callable, Optional
 
-DIRETORIO_BASE  = Path(__file__).parent
-TOKEN_PATH      = DIRETORIO_BASE / "google_token.json"
-SECRETS_PATH    = DIRETORIO_BASE / "client_secrets.json"
+from _paths import TOKEN_PATH, SECRETS_PATH
 SCOPES          = ["https://www.googleapis.com/auth/drive.file"]
 PASTA_DRIVE     = "Serenus/Backups"
 

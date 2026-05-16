@@ -79,8 +79,7 @@ BANDEIRAS_LABEL = [
 # Utilitários de imagem de bandeira
 # ---------------------------------------------------------------------------
 
-from pathlib import Path as _Path
-_IMAGENS_DIR = _Path(__file__).parent.parent.parent / "imagens"
+from _paths import IMAGENS_DIR as _IMAGENS_DIR
 
 
 def carregar_logo_bandeira(bandeira: str, size: tuple[int, int] = (58, 36)):
