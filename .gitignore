@@ -1,0 +1,81 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ─── Ambientes virtuais ────────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ─── Variáveis de ambiente e segredos ─────────────────────────────────────────
+.env
+.env.*
+*.env
+secrets.py
+client_secrets.json
+google_token.json
+*token*.json
+*credentials*.json
+*chave*.json
+api_keys.*
+
+# ─── Banco de dados (dados do usuário — nunca versionar) ──────────────────────
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ─── Backups gerados pelo app ─────────────────────────────────────────────────
+backups/
+
+# ─── Faturas geradas (PDFs com dados sensíveis) ───────────────────────────────
+faturas_modelos/
+
+# ─── PyInstaller ──────────────────────────────────────────────────────────────
+dist/
+build/
+*.spec
+*.exe
+
+# ─── Ferramentas de build / empacotamento ─────────────────────────────────────
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+MANIFEST
+
+# ─── Testes e cobertura ───────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ─── IDEs e editores ──────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ─── Sistema operacional ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ─── Claude AI (configurações locais) ─────────────────────────────────────────
+.claude/
+
+# ─── Arquivos de desenvolvimento / notas internas ─────────────────────────────
+serenus_prompt_completo.md
+serenus_correcoes_modulo7.md
+serenus_modulo6_pdf.md
