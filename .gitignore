@@ -39,12 +39,14 @@ backups/
 faturas_modelos/
 
 # ─── PyInstaller / empacotamento ─────────────────────────────────────────────
+# Scripts de build (.spec / .iss) e binários gerados NÃO vão para o
+# repositório — fazem parte do pacote comercial vendido separadamente.
 dist/
 build/
 *.spec
-!serenus.spec
 *.exe
 instalador/output/
+instalador/serenus.iss
 
 # ─── Ferramentas de build / empacotamento ─────────────────────────────────────
 *.egg-info/
