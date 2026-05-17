@@ -107,6 +107,52 @@ def _creditos_investimento_mes(mes: int, ano: int) -> list[dict]:
         return []
 
 
+def _creditos_vendas_mes(mes: int, ano: int) -> list[dict]:
+    """Retorna entradas do módulo de vendas para o mês.
+
+    Inclui:
+    - Vendas à vista com status='paga' cuja data_venda cai no mês.
+    - Parcelas de contas_a_receber quitadas (status='recebido') no mês.
+    Garante que nenhuma venda a prazo entra antes da quitação efetiva.
+    """
+    inicio = f"{ano:04d}-{mes:02d}-01"
+    fim    = f"{ano:04d}-{mes + 1:02d}-01" if mes < 12 else f"{ano + 1:04d}-01-01"
+    linhas: list[dict] = []
+
+    with conectar() as conn:
+        avista = conn.execute("""
+            SELECT data_venda AS data,
+                   COALESCE(NULLIF(descricao,''), 'Venda') AS descricao,
+                   valor_liquido AS credito
+            FROM vendas
+            WHERE tipo_pagamento = 'avista' AND status = 'paga'
+              AND data_venda >= ? AND data_venda < ?
+            ORDER BY data_venda
+        """, (inicio, fim)).fetchall()
+
+        aprazo = conn.execute("""
+            SELECT data_recebimento AS data,
+                   descricao || '' AS descricao,
+                   valor AS credito
+            FROM contas_a_receber
+            WHERE status = 'recebido'
+              AND data_recebimento >= ? AND data_recebimento < ?
+            ORDER BY data_recebimento
+        """, (inicio, fim)).fetchall()
+
+    for r in [*avista, *aprazo]:
+        linhas.append({
+            "data":      r["data"],
+            "descricao": r["descricao"],
+            "categoria": "Vendas",
+            "debito":    0.0,
+            "credito":   float(r["credito"]),
+            "tipo":      "receita",
+            "status":    "recebido",
+        })
+    return linhas
+
+
 def extrato_mes(mes: int, ano: int) -> list[LinhaExtrato]:
     """
     Retorna as linhas do extrato do mês ordenadas por data.
@@ -115,6 +161,7 @@ def extrato_mes(mes: int, ano: int) -> list[LinhaExtrato]:
     linhas_raw = (
         _creditos_mes(mes, ano)
         + _creditos_investimento_mes(mes, ano)
+        + _creditos_vendas_mes(mes, ano)
         + _debitos_mes(mes, ano)
     )
 
