@@ -267,6 +267,7 @@ def inicializar_banco():
     _migrar_plano_contas(conn)
     _migrar_fontes_receita(conn)
     _migrar_tabelas_vendas(conn)
+    _migrar_compras_cartao(conn)
     _popular_contas_padrao(conn)
     _popular_fontes_padrao(conn)
     popular_dados_exemplo(conn)
@@ -298,6 +299,16 @@ def _migrar_fontes_receita(conn: sqlite3.Connection):
     for coluna, tipo in extras:
         if coluna not in colunas_existentes:
             conn.execute(f"ALTER TABLE fontes_receita ADD COLUMN {coluna} {tipo}")
+    conn.commit()
+
+
+def _migrar_compras_cartao(conn: sqlite3.Connection):
+    """Adiciona colunas de rastreio de importação a compras_cartao (migração idempotente)."""
+    colunas = {row[1] for row in conn.execute("PRAGMA table_info(compras_cartao)")}
+    if "importado_numero_parcela" not in colunas:
+        conn.execute("ALTER TABLE compras_cartao ADD COLUMN importado_numero_parcela INTEGER")
+    if "importado_mes_ref" not in colunas:
+        conn.execute("ALTER TABLE compras_cartao ADD COLUMN importado_mes_ref TEXT")
     conn.commit()
 
 

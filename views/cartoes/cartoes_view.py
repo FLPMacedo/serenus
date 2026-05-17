@@ -165,6 +165,11 @@ class CartoesView(ctk.CTkFrame):
                       command=lambda c=cartao: self._lancar_compra(c)
                       ).pack(side="left", padx=2)
 
+        ctk.CTkButton(btns, text="⬆ Importar", height=28, width=90,
+                      font=ctk.CTkFont(size=11),
+                      command=lambda c=cartao: self._importar_fatura(c)
+                      ).pack(side="left", padx=2)
+
         ctk.CTkButton(btns, text="Ver faturas", height=28, width=90,
                       font=ctk.CTkFont(size=11),
                       fg_color="transparent", border_width=1,
@@ -206,6 +211,12 @@ class CartoesView(ctk.CTkFrame):
         FormCompra(self, cartao=cartao,
                    on_salvo=lambda msg: (self._carregar(),
                                          self._toast(msg)))
+
+    def _importar_fatura(self, cartao: Cartao):
+        from views.cartoes.importar_fatura_modal import ImportarFaturaModal
+        ImportarFaturaModal(self, cartao=cartao,
+                            on_importado=lambda msg: (self._carregar(),
+                                                      self._toast(msg)))
 
     def _ver_faturas(self, cartao: Cartao):
         from views.cartoes.faturas_view import FaturasView

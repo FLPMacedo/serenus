@@ -632,3 +632,37 @@ def exportar_ir_xlsx(caminho: str) -> None:
                 ).font = Font(italic=True, color="888888", size=9)
 
     wb.save(caminho)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Template de importação de fatura
+# ─────────────────────────────────────────────────────────────────────────────
+
+def gerar_template_importacao_xlsx(caminho: str) -> None:
+    """Gera planilha-modelo para importação de fatura de cartão."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Fatura"
+
+    colunas = ["descricao", "estabelecimento", "categoria", "parcela", "valor"]
+    for col, nome in enumerate(colunas, start=1):
+        cell = ws.cell(row=1, column=col, value=nome)
+        cell.font      = _FONT_HEADER
+        cell.fill      = _FILL_HEADER
+        cell.alignment = _ALIGN_CTR
+
+    # Larguras sugeridas
+    larguras = [30, 25, 20, 10, 12]
+    for i, w in enumerate(larguras, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # Linha de exemplo comentada
+    ws.cell(row=2, column=1, value="Netflix")
+    ws.cell(row=2, column=2, value="Netflix Inc")
+    ws.cell(row=2, column=3, value="Streaming")
+    ws.cell(row=2, column=4, value="3/12")
+    ws.cell(row=2, column=5, value=55.90)
+    for col in range(1, 6):
+        ws.cell(row=2, column=col).font = Font(italic=True, color="888888")
+
+    wb.save(caminho)

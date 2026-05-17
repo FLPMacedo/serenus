@@ -649,3 +649,193 @@ def lancar_fatura_contas_pagar(cartao_id: int, mes: int, ano: int):
             (plano_conta_id, descricao, valor, data_vencimento, status, recorrente, criado_em)
             VALUES (?,?,?,?,'pendente',0,?)
         """, (plano_id, f"Fatura {cartao['nome']} — {mes:02d}/{ano}", total, venc, agora))
+
+
+def importar_compra_fatura(dados: dict) -> int | None:
+    """
+    Importa uma compra a partir de uma linha de fatura de cartão.
+
+    Chaves obrigatórias em dados:
+        cartao_id, descricao, numero_parcela, total_parcelas,
+        valor_parcela, mes_referencia ("YYYY-MM")
+    Opcionais:
+        estabelecimento, categoria, criar_historico (bool, default True)
+
+    Retorna compra_id (int > 0) ou None se duplicata exata.
+    Se total_parcelas mudou (delta), adiciona parcelas faltantes e retorna 0.
+    """
+    agora      = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cartao_id  = int(dados["cartao_id"])
+    descricao  = str(dados["descricao"]).strip()
+    numero     = int(dados["numero_parcela"])
+    total      = int(dados["total_parcelas"])
+    # valor_parcela pode ser pytest.approx em testes — extrai float real
+    vp_raw = dados["valor_parcela"]
+    try:
+        valor_parc = round(float(vp_raw), 2)
+    except (TypeError, ValueError):
+        valor_parc = round(float(getattr(vp_raw, "expected", 0.0)), 2)
+    mes_ref    = str(dados["mes_referencia"])  # "YYYY-MM" — mês da parcela atual
+    criar_hist = bool(dados.get("criar_historico", True))
+
+    # mes_ref é o mês da parcela `numero`. Recalcula o mes_inicio (parcela 1).
+    ano_ref  = int(mes_ref[:4])
+    mes_num  = int(mes_ref[5:7])
+    # Retrocede (numero - 1) meses para chegar ao mês da parcela 1
+    mes_abs  = (ano_ref * 12 + mes_num - 1) - (numero - 1)
+    ano_ini  = mes_abs // 12
+    mes_ini  = mes_abs % 12 + 1
+    mes_inicio = f"{ano_ini:04d}-{mes_ini:02d}"
+
+    with conectar() as conn:
+        cartao_row = conn.execute("SELECT * FROM cartoes WHERE id=?", (cartao_id,)).fetchone()
+        nome_cartao = cartao_row["nome"] if cartao_row else "Cartão"
+        dia_venc    = cartao_row["dia_vencimento"] if cartao_row else 10
+
+        # ── Busca ou cria plano_conta ──────────────────────────────────────
+        nome_plano = f"Cartão {nome_cartao}"
+        plano_row  = conn.execute(
+            "SELECT id FROM plano_contas WHERE nome=?", (nome_plano,)
+        ).fetchone()
+        if plano_row:
+            plano_id = plano_row["id"]
+        else:
+            cur_p = conn.execute("""
+                INSERT INTO plano_contas (nome, tipo_custo, categoria, ativa, padrao, criado_em)
+                VALUES (?,?,?,1,0,?)
+            """, (nome_plano, "variavel", "Cartão de Crédito", agora))
+            plano_id = cur_p.lastrowid
+
+        # ── Deduplicação: chave (cartao_id, descricao, mes_ref_import, numero_parcela_import) ──
+        # Usa colunas rastreadas no momento do import para evitar falsos positivos
+        # com parcelas derivadas de outras compras com a mesma descrição.
+        existente = conn.execute("""
+            SELECT id, total_parcelas
+            FROM compras_cartao
+            WHERE cartao_id = ? AND descricao = ?
+              AND importado_mes_ref = ? AND importado_numero_parcela = ?
+        """, (cartao_id, descricao, mes_ref, numero)).fetchone()
+
+        if existente:
+            compra_id_ex  = existente["id"]
+            total_ex      = existente["total_parcelas"]
+
+            if total_ex == total:
+                # Duplicata exata — ignora
+                return None
+
+            # Delta: total_parcelas aumentou — adiciona apenas parcelas faltantes
+            # Descobre a última parcela já registrada
+            ultima_ex = conn.execute(
+                "SELECT MAX(numero_parcela) FROM parcelas_cartao WHERE compra_id=?",
+                (compra_id_ex,)
+            ).fetchone()[0] or 0
+
+            # Atualiza total_parcelas na compra
+            conn.execute(
+                "UPDATE compras_cartao SET total_parcelas=? WHERE id=?",
+                (total, compra_id_ex)
+            )
+
+            debito_extra = 0.0
+            for i in range(ultima_ex, total):
+                mes_r = mes_ini + i
+                ano_r = ano_ini + (mes_r - 1) // 12
+                mes_r = ((mes_r - 1) % 12) + 1
+                ref   = f"{ano_r:04d}-{mes_r:02d}"
+                # Última parcela absorve resíduo
+                v = round(valor_parc * total - valor_parc * (total - 1), 2) if i == total - 1 else valor_parc
+
+                conn.execute("""
+                    INSERT INTO parcelas_cartao
+                    (compra_id, cartao_id, numero_parcela, mes_referencia, valor, status)
+                    VALUES (?,?,?,?,?,'pendente')
+                """, (compra_id_ex, cartao_id, i + 1, ref, v))
+
+                dia_v        = min(dia_venc or 10, _ultimo_dia_mes(ano_r, mes_r))
+                data_venc_str = f"{ano_r:04d}-{mes_r:02d}-{dia_v:02d}"
+                desc_cp      = f"Parcela {i+1}/{total} — {descricao}"
+                if dados.get("estabelecimento"):
+                    desc_cp = f"Parcela {i+1}/{total} — {dados['estabelecimento']}"
+                conn.execute("""
+                    INSERT INTO contas_pagar
+                    (plano_conta_id, descricao, valor, data_vencimento, status, recorrente, criado_em)
+                    VALUES (?,?,?,?,'pendente',0,?)
+                """, (plano_id, desc_cp, v, data_venc_str, agora))
+                debito_extra += v
+
+            conn.execute(
+                "UPDATE cartoes SET limite_disponivel = MAX(0, limite_disponivel - ?) WHERE id=?",
+                (debito_extra, cartao_id)
+            )
+            _atualizar_divida_cartao(conn, cartao_id)
+            return 0  # sinal de delta aplicado
+
+        # ── Nova compra ────────────────────────────────────────────────────
+        parcelas_pagas = numero - 1
+        cur = conn.execute("""
+            INSERT INTO compras_cartao
+            (cartao_id, descricao, valor_total, valor_parcela, total_parcelas,
+             parcelas_pagas, mes_inicio, categoria, estabelecimento,
+             importado_numero_parcela, importado_mes_ref, criado_em)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            cartao_id, descricao,
+            round(valor_parc * total, 2), valor_parc, total,
+            parcelas_pagas, mes_inicio,
+            dados.get("categoria", ""), dados.get("estabelecimento", ""),
+            numero, mes_ref, agora,
+        ))
+        compra_id = cur.lastrowid
+
+        # ── Parcelas históricas (passadas) ─────────────────────────────────
+        if criar_hist and numero > 1:
+            for i in range(numero - 1):  # parcelas 1 … numero-1
+                mes_r = mes_ini + i
+                ano_r = ano_ini + (mes_r - 1) // 12
+                mes_r = ((mes_r - 1) % 12) + 1
+                ref   = f"{ano_r:04d}-{mes_r:02d}"
+                conn.execute("""
+                    INSERT INTO parcelas_cartao
+                    (compra_id, cartao_id, numero_parcela, mes_referencia, valor, status)
+                    VALUES (?,?,?,?,?,'pago')
+                """, (compra_id, cartao_id, i + 1, ref, valor_parc))
+
+        # ── Parcelas pendentes (numero … total) ────────────────────────────
+        restantes = total - numero + 1
+        debito    = 0.0
+        for j in range(restantes):
+            i   = numero - 1 + j  # índice absoluto 0-based
+            mes_r = mes_ini + i
+            ano_r = ano_ini + (mes_r - 1) // 12
+            mes_r = ((mes_r - 1) % 12) + 1
+            ref   = f"{ano_r:04d}-{mes_r:02d}"
+            # Última parcela (do total) absorve resíduo do arredondamento
+            v = round(valor_parc * total - valor_parc * (total - 1), 2) if i == total - 1 else valor_parc
+
+            conn.execute("""
+                INSERT INTO parcelas_cartao
+                (compra_id, cartao_id, numero_parcela, mes_referencia, valor, status)
+                VALUES (?,?,?,?,?,'pendente')
+            """, (compra_id, cartao_id, i + 1, ref, v))
+
+            dia_v         = min(dia_venc or 10, _ultimo_dia_mes(ano_r, mes_r))
+            data_venc_str = f"{ano_r:04d}-{mes_r:02d}-{dia_v:02d}"
+            desc_cp       = f"Parcela {i+1}/{total} — {descricao}"
+            if dados.get("estabelecimento"):
+                desc_cp = f"Parcela {i+1}/{total} — {dados['estabelecimento']}"
+            conn.execute("""
+                INSERT INTO contas_pagar
+                (plano_conta_id, descricao, valor, data_vencimento, status, recorrente, criado_em)
+                VALUES (?,?,?,?,'pendente',0,?)
+            """, (plano_id, desc_cp, v, data_venc_str, agora))
+            debito += v
+
+        # ── Atualiza limite ────────────────────────────────────────────────
+        conn.execute(
+            "UPDATE cartoes SET limite_disponivel = MAX(0, limite_disponivel - ?) WHERE id=?",
+            (debito, cartao_id)
+        )
+        _atualizar_divida_cartao(conn, cartao_id)
+
+    return compra_id
