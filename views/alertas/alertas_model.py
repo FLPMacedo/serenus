@@ -31,6 +31,7 @@ def alertas_pendentes() -> list[Alerta]:
     alertas += _contas_pagar()
     alertas += _faturas_cartao()
     alertas += _vencimentos_rf()
+    alertas += _recebiveis()
 
     _ordem = {"alta": 0, "media": 1, "baixa": 2}
     alertas.sort(key=lambda a: _ordem[a.urgencia])
@@ -135,6 +136,46 @@ def _vencimentos_rf() -> list[Alerta]:
             data=venc,
             urgencia="media",
         ))
+    return alertas
+
+
+def _recebiveis() -> list[Alerta]:
+    """Alertas de contas_a_receber vencidas ou vencendo em até 7 dias."""
+    hoje   = date.today()
+    limite = (hoje + timedelta(days=_JANELA_CONTA_DIAS)).isoformat()
+    hoje_s = hoje.isoformat()
+
+    with conectar() as conn:
+        rows = conn.execute("""
+            SELECT descricao, valor, data_vencimento
+            FROM   contas_a_receber
+            WHERE  status = 'pendente'
+              AND  data_vencimento <= ?
+            ORDER BY data_vencimento
+        """, (limite,)).fetchall()
+
+    alertas = []
+    for r in rows:
+        venc = r["data_vencimento"]
+        nome = r["descricao"] or "Recebível"
+        if venc < hoje_s:
+            alertas.append(Alerta(
+                tipo="recebivel_vencido",
+                descricao=f"{nome} — venceu em {_fmt(venc)}",
+                data=venc,
+                urgencia="alta",
+                valor=r["valor"],
+            ))
+        else:
+            dias = (date.fromisoformat(venc) - hoje).days
+            sufixo = "hoje" if dias == 0 else f"em {dias} dia{'s' if dias > 1 else ''}"
+            alertas.append(Alerta(
+                tipo="recebivel_vencendo",
+                descricao=f"{nome} — vence {sufixo}",
+                data=venc,
+                urgencia="media",
+                valor=r["valor"],
+            ))
     return alertas
 
 
