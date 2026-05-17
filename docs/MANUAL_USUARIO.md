@@ -29,6 +29,8 @@
 
 ## 1. Visão Geral
 
+![Tela inicial do Serenus — dashboard com receita base, parcelas, saldo livre e projeção mensal](screenshots/01_inicio_dashboard.png)
+
 O **Serenus** é um aplicativo de finanças pessoais instalado localmente no seu computador. Todos os dados ficam salvos em um banco de dados SQLite em `%APPDATA%\Serenus\` — nenhuma informação é enviada para a internet.
 
 A partir da **versão 2.0**, o Serenus também cobre o controle financeiro de **pequenos negócios e freelancers**, com módulo completo de vendas, controle de recebíveis e importação de faturas de cartão por planilha.
@@ -92,6 +94,8 @@ Se quiser explorar o sistema com dados prontos antes de cadastrar os seus:
 
 ## 3. Minhas Receitas
 
+![Minhas Receitas — fontes de renda ativas com valores mensais](screenshots/02_minhas_receitas.png)
+
 ### 3.1 Fontes de receita
 
 Rendas recorrentes que entram todo mês (salário, aluguel, freela, dividendos).
@@ -133,6 +137,8 @@ A aba **Visão Mensal** agora exibe uma seção **"Vendas e Serviços realizados
 ---
 
 ## 4. Contas a Pagar
+
+![Contas a Pagar — despesas do mês com filtros, status e ações](screenshots/03_contas_a_pagar.png)
 
 ### 4.1 Registrando uma despesa
 
@@ -180,6 +186,8 @@ Use o campo de busca no topo para localizar despesas por descrição ou nome da 
 ---
 
 ## 5. Vendas *(módulo novo — v2.0)*
+
+![Vendas — listagem do mês com vendas à vista pagas e total](screenshots/04_vendas.png)
 
 O módulo de Vendas foi projetado para freelancers, prestadores de serviço e microempreendedores que precisam controlar o que venderam, o que receberam e o que ainda está a receber.
 
@@ -259,6 +267,8 @@ As vendas realizadas aparecem automaticamente:
 ---
 
 ## 6. Cartões de Crédito
+
+![Cartões — grade visual com cartões cadastrados (Itaú Visa, Nubank Mastercard)](screenshots/05_cartoes.png)
 
 ### 6.1 Cadastrando um cartão
 
@@ -350,6 +360,8 @@ Na tela de faturas, clique em **Lançar fatura em contas a pagar** para criar um
 
 ## 7. Gerenciamento de Dívidas
 
+![Gerenciamento de Dívidas — KPIs, gráfico de evolução do saldo devedor e parcelas mensais](screenshots/06_gerenciamento_dividas.png)
+
 ### 7.1 Cadastrando uma dívida
 
 1. Clique em **+ Nova dívida**
@@ -376,6 +388,8 @@ Clique em **⬇ Excel** para exportar a lista de dívidas e a projeção de evol
 
 ## 8. Plano de Contas
 
+![Plano de Contas — categorias usadas para classificar despesas](screenshots/07_plano_de_contas.png)
+
 O Plano de Contas organiza despesas em categorias. Cada despesa registrada em **Contas a Pagar** é vinculada a uma conta do plano.
 
 ### 8.1 Contas padrão
@@ -397,6 +411,8 @@ Clique em **↩ Restaurar padrões** para reinserir contas padrão que foram exc
 ---
 
 ## 9. Visão Financeira
+
+![Visão Financeira — projeção mês a mês dos próximos 5 anos com cores por saldo](screenshots/08_visao_financeira.png)
 
 ### 9.1 Aba Projeção
 
@@ -439,6 +455,8 @@ Clique em **⬇ Excel** para baixar a projeção completa em planilha.
 
 ## 10. Fluxo de Caixa
 
+![Fluxo de Caixa — extrato detalhado de lançamentos com gráfico e filtros](screenshots/09_fluxo_de_caixa_extrato.png)
+
 O Fluxo de Caixa é a tela inicial (Dashboard) e mostra a situação financeira consolidada.
 
 ### 10.1 Painel de resumo
@@ -464,6 +482,8 @@ Barras agrupadas com receitas × despesas e linha de saldo ao longo do horizonte
 ---
 
 ## 11. Investimentos
+
+![Investimentos — carteira consolidada com ações, FIIs, CDBs, Tesouro e cripto](screenshots/10_investimentos.png)
 
 ### 11.1 Cadastrando uma conta de investimento
 
@@ -515,6 +535,8 @@ Posições ativas com custo médio, valor investido, valor atual, lucro/prejuíz
 
 ## 12. Metas Financeiras
 
+![Metas Financeiras — objetivos com barra de progresso (uma já concluída em verde)](screenshots/11_metas.png)
+
 ### 12.1 Criando uma meta
 
 1. Clique em **+ Nova meta**
@@ -547,6 +569,8 @@ Clique em **⬇ Excel** para baixar todas as metas com progresso, prazo e econom
 
 ## 13. Backup e Restauração
 
+![Backup e Restauração — botões de salvar/restaurar e integração com Google Drive](screenshots/12_backup.png)
+
 ### 13.1 Fazendo backup
 
 1. Acesse **Backup**
@@ -572,6 +596,8 @@ Os dados no Drive são privados — só você tem acesso.
 ---
 
 ## 14. Configurações
+
+![Configurações — perfil, modo ajuda, senha, dados demo e zerar sistema](screenshots/13_configuracoes.png)
 
 | Opção | Descrição |
 |-------|-----------|
