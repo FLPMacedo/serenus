@@ -19,11 +19,23 @@ class PlanoContasView(ctk.CTkFrame):
         self._cores = get_tema(obter_configuracao("tema", "claro"))
 
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(3, weight=1)
 
         self._build_header()
+        self._build_banner()
         self._build_tabela()
         self._carregar()
+
+    def _build_banner(self):
+        from views.widgets.ajuda import banner_ajuda
+        b = banner_ajuda(
+            self, self._cores,
+            "Aqui ficam as categorias usadas para classificar suas despesas. "
+            "Use '↩ Restaurar padrões' para repor as categorias removidas e "
+            "'+ Nova conta' para criar categorias personalizadas.",
+        )
+        if b:
+            b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
 
     # ------------------------------------------------------------------
 
@@ -37,11 +49,19 @@ class PlanoContasView(ctk.CTkFrame):
                      font=ctk.CTkFont(size=20, weight="bold"),
                      text_color=cores["texto"]).grid(row=0, column=0, sticky="w")
 
-        ctk.CTkButton(header, text="↩ Restaurar padrões", height=32,
-                      fg_color="transparent", border_width=1,
-                      border_color=cores["borda"], text_color=cores["texto_mudo"],
-                      font=ctk.CTkFont(size=12),
-                      command=self._restaurar_padroes).grid(row=0, column=1, padx=(0, 8), sticky="e")
+        from views.widgets.ajuda import Tooltip
+        btn_rest = ctk.CTkButton(
+            header, text="↩ Restaurar padrões", height=32,
+            fg_color="transparent", border_width=1,
+            border_color=cores["borda"], text_color=cores["texto_mudo"],
+            font=ctk.CTkFont(size=12),
+            command=self._restaurar_padroes,
+        )
+        btn_rest.grid(row=0, column=1, padx=(0, 8), sticky="e")
+        Tooltip(btn_rest,
+                "Recria as categorias padrão que foram excluídas.\n"
+                "Suas categorias personalizadas e lançamentos existentes "
+                "não são alterados.")
 
         ctk.CTkButton(header, text="+ Nova conta", height=32,
                       command=self._abrir_form_novo).grid(row=0, column=2, sticky="e")
@@ -59,7 +79,7 @@ class PlanoContasView(ctk.CTkFrame):
         colunas = [("Nome", 220), ("Tipo", 90), ("Categoria", 140), ("Status", 80), ("Ações", 170)]
 
         cab = ctk.CTkFrame(self, fg_color=cores["card"], corner_radius=8)
-        cab.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
+        cab.grid(row=2, column=0, sticky="ew", padx=20, pady=(8, 0))
         for i, (nome, larg) in enumerate(colunas):
             ctk.CTkLabel(cab, text=nome, width=larg,
                          font=ctk.CTkFont(size=12, weight="bold"),
@@ -68,8 +88,8 @@ class PlanoContasView(ctk.CTkFrame):
             )
 
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self._scroll.grid(row=2, column=0, sticky="nsew", padx=20, pady=(2, 16))
-        self.grid_rowconfigure(2, weight=1)
+        self._scroll.grid(row=3, column=0, sticky="nsew", padx=20, pady=(2, 16))
+        self.grid_rowconfigure(3, weight=1)
         self._colunas = colunas
 
     # ------------------------------------------------------------------

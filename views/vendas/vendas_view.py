@@ -20,10 +20,22 @@ class VendasView(ctk.CTkFrame):
         self._mes   = date.today().month
         self._ano   = date.today().year
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self._build_header()
+        self._build_banner()
         self._build_abas()
         self._carregar_vendas()
+
+    def _build_banner(self):
+        from views.widgets.ajuda import banner_ajuda
+        b = banner_ajuda(
+            self, self._cores,
+            "Registre vendas de produtos e serviços. Vendas à vista entram "
+            "no seu Fluxo de Caixa imediatamente; vendas a prazo geram "
+            "parcelas em 'A Receber' e só entram no caixa quando recebidas.",
+        )
+        if b:
+            b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
 
     # ------------------------------------------------------------------
     def _build_header(self):
@@ -61,14 +73,20 @@ class VendasView(ctk.CTkFrame):
             border_color=cores["borda"], text_color=cores["texto"],
             command=self._abrir_produtos,
         ).pack(side="left", padx=(0, 6))
-        ctk.CTkButton(
+        from views.widgets.ajuda import Tooltip
+        btn_nova = ctk.CTkButton(
             btns, text="+ Nova venda", height=34,
             command=self._abrir_form_venda,
-        ).pack(side="left")
+        )
+        btn_nova.pack(side="left")
+        Tooltip(btn_nova,
+                "Cadastre uma venda nova.\n"
+                "Adicione produtos/serviços, escolha à vista ou a prazo "
+                "e gere os recebíveis com poucos cliques.")
 
     def _build_abas(self):
         self._tab = ctk.CTkTabview(self)
-        self._tab.grid(row=1, column=0, sticky="nsew", padx=20, pady=16)
+        self._tab.grid(row=2, column=0, sticky="nsew", padx=20, pady=16)
         self._tab.add("Vendas do Mês")
         self._tab.add("A Receber")
         for aba in ("Vendas do Mês", "A Receber"):

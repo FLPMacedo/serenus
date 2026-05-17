@@ -18,11 +18,23 @@ class CartoesView(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent")
         self._cores = get_tema(obter_configuracao("tema", "claro"))
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
         self._build_header()
+        self._build_banner()
         self._build_conteudo()
         self._carregar()
+
+    def _build_banner(self):
+        from views.widgets.ajuda import banner_ajuda
+        b = banner_ajuda(
+            self, self._cores,
+            "Cadastre seus cartões e lance compras parceladas. Use '⬆ Importar "
+            "Fatura' para importar o extrato do banco em CSV ou XLSX — o sistema "
+            "detecta as parcelas e o histórico automaticamente.",
+        )
+        if b:
+            b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
 
     # ------------------------------------------------------------------
 
@@ -41,17 +53,30 @@ class CartoesView(ctk.CTkFrame):
                         variable=self._var_inativos,
                         command=self._carregar).grid(row=0, column=1, padx=12, sticky="e")
 
-        ctk.CTkButton(header, text="⬆ Importar Fatura", height=32,
-                      fg_color="transparent", border_width=1,
-                      border_color=cores["primario"], text_color=cores["primario"],
-                      command=self._importar_fatura_global).grid(row=0, column=2, padx=8, sticky="e")
+        from views.widgets.ajuda import Tooltip
+        btn_importar = ctk.CTkButton(
+            header, text="⬆ Importar Fatura", height=32,
+            fg_color="transparent", border_width=1,
+            border_color=cores["primario"], text_color=cores["primario"],
+            command=self._importar_fatura_global,
+        )
+        btn_importar.grid(row=0, column=2, padx=8, sticky="e")
+        Tooltip(btn_importar,
+                "Importe a fatura do cartão em CSV ou XLSX.\n"
+                "O sistema detecta parcelas (ex.: 7/12) e cria as compras "
+                "automaticamente, com histórico das já pagas.")
 
-        ctk.CTkButton(header, text="+ Novo Cartão", height=32,
-                      command=self._novo_cartao).grid(row=0, column=3, sticky="e")
+        btn_novo = ctk.CTkButton(header, text="+ Novo Cartão", height=32,
+                                 command=self._novo_cartao)
+        btn_novo.grid(row=0, column=3, sticky="e")
+        Tooltip(btn_novo,
+                "Cadastre um novo cartão de crédito.\n"
+                "Informe banco, bandeira, limite e dia de vencimento — "
+                "o cartão aparecerá na grade com cor da bandeira.")
 
     def _build_conteudo(self):
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self._scroll.grid(row=1, column=0, sticky="nsew", padx=16, pady=12)
+        self._scroll.grid(row=2, column=0, sticky="nsew", padx=16, pady=12)
         self._scroll.grid_columnconfigure((0, 1), weight=1)
 
     # ------------------------------------------------------------------

@@ -36,12 +36,24 @@ class ContasPagarView(ctk.CTkFrame):
         self._filtro_tipo      = None
 
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(4, weight=1)
 
         self._build_header()
+        self._build_banner()
         self._build_tabela()
         self._build_rodape()
         self._carregar()
+
+    def _build_banner(self):
+        from views.widgets.ajuda import banner_ajuda
+        b = banner_ajuda(
+            self, self._cores,
+            "Liste e gerencie suas despesas do mês. Use '+ Nova despesa' para "
+            "lançar uma conta (com opção de pagar no cartão de crédito ou "
+            "criar despesa recorrente).",
+        )
+        if b:
+            b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
 
     # ------------------------------------------------------------------
     # Header: título + filtros + botão novo
@@ -71,7 +83,7 @@ class ContasPagarView(ctk.CTkFrame):
 
         # Filtros
         filtros = ctk.CTkFrame(self, fg_color="transparent")
-        filtros.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
+        filtros.grid(row=2, column=0, sticky="ew", padx=20, pady=(8, 0))
 
         ctk.CTkLabel(filtros, text="Status:").pack(side="left", padx=(0, 4))
         self._combo_status = ctk.CTkComboBox(
@@ -115,7 +127,7 @@ class ContasPagarView(ctk.CTkFrame):
 
         # Cabeçalho fixo
         cab = ctk.CTkFrame(self, fg_color=cores["card"], corner_radius=8)
-        cab.grid(row=2, column=0, sticky="ew", padx=20, pady=(8, 0))
+        cab.grid(row=3, column=0, sticky="ew", padx=20, pady=(8, 0))
         for i, (nome, larg) in enumerate(COLUNAS):
             ctk.CTkLabel(cab, text=nome, width=larg,
                          font=ctk.CTkFont(size=12, weight="bold"),
@@ -127,13 +139,13 @@ class ContasPagarView(ctk.CTkFrame):
         self._scroll = ctk.CTkScrollableFrame(
             self, fg_color="transparent", corner_radius=0
         )
-        self._scroll.grid(row=3, column=0, sticky="nsew", padx=20, pady=(2, 0))
-        self.grid_rowconfigure(3, weight=1)
+        self._scroll.grid(row=4, column=0, sticky="nsew", padx=20, pady=(2, 0))
+        self.grid_rowconfigure(4, weight=1)
 
     def _build_rodape(self):
         cores = self._cores
         rod = ctk.CTkFrame(self, fg_color=cores["card"], corner_radius=8)
-        rod.grid(row=4, column=0, sticky="ew", padx=20, pady=(8, 16))
+        rod.grid(row=5, column=0, sticky="ew", padx=20, pady=(8, 16))
 
         self._lbl_pendente = ctk.CTkLabel(rod, text="Pendente: —",
                                           text_color=cores["atencao"],

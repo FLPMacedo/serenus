@@ -32,6 +32,7 @@ class ConfiguracaoView(ctk.CTkFrame):
 
         self._scroll = scroll
         self._build_perfil()
+        self._build_ajuda()
         self._build_senha()
         self._build_modo_demo()
         self._build_zerar()
@@ -92,6 +93,35 @@ class ConfiguracaoView(ctk.CTkFrame):
             return
         salvar_configuracao("usuario_nome", nome)
         self._toast(f"Nome salvo: {nome}")
+
+    # ------------------------------------------------------------------
+    # Seção — Modo ajuda
+    # ------------------------------------------------------------------
+
+    def _build_ajuda(self):
+        card = self._secao("💡  Dicas de uso")
+        self._lbl(card, "Quando ligado, o sistema mostra explicações no topo de cada\n"
+                        "tela e balões de ajuda ao passar o mouse sobre botões importantes.\n"
+                        "Desligue quando já estiver familiarizado com o aplicativo.")
+
+        atual = obter_configuracao("modo_ajuda", "1") == "1"
+        self._var_ajuda = ctk.BooleanVar(value=atual)
+
+        ctk.CTkCheckBox(
+            card,
+            text="Mostrar dicas de uso (modo ajuda)",
+            variable=self._var_ajuda,
+            command=self._salvar_modo_ajuda,
+            font=ctk.CTkFont(size=12),
+        ).pack(anchor="w", padx=20, pady=(8, 14))
+
+    def _salvar_modo_ajuda(self):
+        valor = "1" if self._var_ajuda.get() else "0"
+        salvar_configuracao("modo_ajuda", valor)
+        if valor == "1":
+            self._toast("Dicas de uso ativadas. Mudanças aparecem ao trocar de tela.")
+        else:
+            self._toast("Dicas de uso desativadas. Mudanças aparecem ao trocar de tela.")
 
     # ------------------------------------------------------------------
     # Seção 2 — Senha de acesso

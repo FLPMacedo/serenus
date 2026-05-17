@@ -42,6 +42,7 @@ faturas_modelos/
 dist/
 build/
 *.spec
+!serenus.spec
 *.exe
 instalador/output/
 

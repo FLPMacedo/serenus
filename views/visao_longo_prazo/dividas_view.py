@@ -35,7 +35,7 @@ class VisaoLongoPrazoView(ctk.CTkFrame):
         self._cores   = get_tema(obter_configuracao("tema", "claro"))
         self._horizonte = 12  # meses padrão
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
         hdr = ctk.CTkFrame(self, fg_color="transparent")
         hdr.grid(row=0, column=0, sticky="ew", padx=20, pady=(16, 0))
@@ -49,8 +49,18 @@ class VisaoLongoPrazoView(ctk.CTkFrame):
                       text_color=self._cores["texto"],
                       command=self._exportar_excel).grid(row=0, column=1, sticky="e")
 
+        from views.widgets.ajuda import banner_ajuda
+        _b = banner_ajuda(
+            self, self._cores,
+            "Centralize empréstimos, financiamentos e parcelados. O Dashboard "
+            "mostra a evolução do saldo total mês a mês; em 'Minhas Dívidas' "
+            "você cadastra cada dívida com saldo e parcela mensal.",
+        )
+        if _b:
+            _b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
+
         tabs = ctk.CTkTabview(self)
-        tabs.grid(row=1, column=0, sticky="nsew", padx=16, pady=8)
+        tabs.grid(row=2, column=0, sticky="nsew", padx=16, pady=8)
         tabs.add("Dashboard")
         tabs.add("Minhas Dívidas")
         tabs._segmented_button.configure(font=ctk.CTkFont(size=13))

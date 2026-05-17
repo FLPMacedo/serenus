@@ -115,6 +115,9 @@ def _receita_mes(fontes, especiais_por_mes: dict, mes_0: int) -> tuple[float, li
     - Fontes recorrentes (ajustadas por periodicidade)
     - Receitas especiais do mês
     Retorna (total, lista_especiais)
+
+    NÃO inclui vendas — vendas dependem de mês real (passado/atual) e são
+    somadas separadamente em `projetar_fluxo` via `_receitas_vendas_mes`.
     """
     total = 0.0
     for f in fontes:
@@ -133,6 +136,36 @@ def _receita_mes(fontes, especiais_por_mes: dict, mes_0: int) -> tuple[float, li
             total += e.valor
 
     return total, especiais
+
+
+def _receitas_vendas_mes(mes_0: int, ano: int) -> float:
+    """Soma vendas à vista pagas + recebíveis quitados no mês (mes_0 é 0-based).
+
+    Mês futuro tipicamente retorna 0 (não há venda realizada ainda).
+    Reaproveita o mesmo critério usado em `extrato_model` e `projecao_model`
+    para garantir que o Fluxo de Caixa, o Extrato e a Visão Futura batam.
+    """
+    mes_num = mes_0 + 1
+    inicio  = f"{ano:04d}-{mes_num:02d}-01"
+    fim     = (f"{ano:04d}-{mes_num + 1:02d}-01"
+               if mes_num < 12 else f"{ano + 1:04d}-01-01")
+    try:
+        with conectar() as conn:
+            avista = conn.execute("""
+                SELECT COALESCE(SUM(valor_liquido), 0)
+                FROM   vendas
+                WHERE  tipo_pagamento='avista' AND status='paga'
+                  AND  data_venda >= ? AND data_venda < ?
+            """, (inicio, fim)).fetchone()[0]
+            aprazo = conn.execute("""
+                SELECT COALESCE(SUM(valor), 0)
+                FROM   contas_a_receber
+                WHERE  status='recebido'
+                  AND  data_recebimento >= ? AND data_recebimento < ?
+            """, (inicio, fim)).fetchone()[0]
+        return float(avista or 0) + float(aprazo or 0)
+    except Exception:
+        return 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +195,7 @@ def projetar_fluxo(meses: int) -> list[MesFluxo]:
         lbl = date(ano, mes_num, 1).strftime("%b/%Y")
 
         receita, especiais = _receita_mes(fontes, especiais_por_mes, mes_0)
+        receita    += _receitas_vendas_mes(mes_0, ano)
         parcelas    = _parcelas_mes(dividas, i)
         desp_fixas  = _despesas_fixas_mes(mes_0, ano, base_fixas)
         saldo       = receita - parcelas - desp_fixas
@@ -199,7 +233,9 @@ def resumo_fluxo(projecao: list[MesFluxo]) -> dict:
 
     mes_atual = projecao[0]
 
-    # Receita mensal base (sem especiais do mês, só fontes recorrentes)
+    # Receita mensal base = fontes recorrentes + vendas realizadas no mês atual
+    # (vendas à vista pagas + recebíveis quitados). Especiais do mês ficam
+    # de fora do card "base" — entram em `mes_atual.receita`.
     fontes = listar_fontes(apenas_ativas=True)
     receita_base = sum(
         f.valor_mensal if f.periodicidade == "mensal"
@@ -207,6 +243,7 @@ def resumo_fluxo(projecao: list[MesFluxo]) -> dict:
         else f.valor_mensal / 12
         for f in fontes
     )
+    receita_base += _receitas_vendas_mes(mes_atual.mes_0, mes_atual.ano)
 
     dividas        = listar_dividas(apenas_ativas=True)
     total_parcelas = sum(d.parcela_mensal for d in dividas if d.parcelas_restantes > 0)

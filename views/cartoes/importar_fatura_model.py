@@ -81,12 +81,17 @@ def _parse_valor(raw) -> float:
     """
     Converte string/número para float.
     Suporta formato brasileiro ("1.234,56") e padrão ("1234.56").
+    Aceita prefixos não-numéricos (ex.: "R$ 1.234,56") — removidos antes da parse.
     Heurística: se há vírgula E ponto, a vírgula é decimal (BR).
     Se só vírgula, é decimal BR. Se só ponto (ou nenhum), é padrão.
     """
     if isinstance(raw, (int, float)):
         return float(raw)
     s = str(raw or "").strip().strip('"')
+    # Remove tudo que não seja dígito, ponto, vírgula ou sinal negativo
+    s = re.sub(r"[^\d.,\-]", "", s)
+    if not s or s in ("-", ".", ","):
+        return 0.0
     if "," in s and "." in s:
         # Formato BR: "1.234,56" — remove ponto milhar, troca vírgula por ponto
         s = s.replace(".", "").replace(",", ".")

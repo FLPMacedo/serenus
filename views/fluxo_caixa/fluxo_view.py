@@ -26,7 +26,7 @@ class FluxoCaixaView(ctk.CTkFrame):
         self._cores      = get_tema(obter_configuracao("tema", "claro"))
         self._horizonte  = 12
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
         if modo_inicio:
             from datetime import date
@@ -44,8 +44,18 @@ class FluxoCaixaView(ctk.CTkFrame):
                      text_color=self._cores["texto"]).grid(
             row=0, column=0, sticky="w", padx=20, pady=(16, 0))
 
+        from views.widgets.ajuda import banner_ajuda
+        _b = banner_ajuda(
+            self, self._cores,
+            "Visão geral das suas finanças. Os cards mostram receita base do "
+            "mês, parcelas e saldo livre. Use a tabela abaixo para ver mês a "
+            "mês — meses em vermelho indicam saldo negativo previsto.",
+        )
+        if _b:
+            _b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
+
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self._scroll.grid(row=1, column=0, sticky="nsew", padx=12, pady=8)
+        self._scroll.grid(row=2, column=0, sticky="nsew", padx=12, pady=8)
         self._scroll.grid_columnconfigure(0, weight=1)
 
         self._recarregar()

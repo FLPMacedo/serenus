@@ -3,13 +3,15 @@
 > Aplicativo desktop de finanças pessoais, desenvolvido em Python com CustomTkinter e SQLite.  
 > Todos os dados ficam salvos localmente — nenhuma informação é enviada para a internet.
 
+**Versão atual: 2.0**
+
 ---
 
 ## O que é o Serenus?
 
 O **Serenus** é um software de finanças pessoais para Windows, pensado para quem quer
-controlar receitas, despesas, dívidas, investimentos e metas em um único lugar — sem
-depender de planilhas ou aplicativos online.
+controlar receitas, despesas, dívidas, investimentos, vendas e metas em um único lugar —
+sem depender de planilhas ou aplicativos online.
 
 Na primeira vez que abre, o app pede seu nome e configura o perfil.
 A partir daí, tudo fica salvo localmente no seu computador, de forma segura e privada.
@@ -20,13 +22,15 @@ A partir daí, tudo fica salvo localmente no seu computador, de forma segura e p
 |--------|-----------|
 | 💰 Minhas Receitas | Cadastro de salário, renda extra, 13º, férias e bônus |
 | 💸 Contas a Pagar | Registro de despesas mensais, parcelamento no cartão e recorrências |
-| 💳 Cartões | Controle de faturas, compras parceladas e limite disponível |
+| 💳 Cartões | Faturas, compras parceladas, limite disponível e **importação de fatura CSV/XLSX** |
+| 🛒 Vendas | Venda de produtos/serviços à vista ou a prazo, contas a receber |
 | 📉 Dívidas | Projeção mês a mês da evolução de empréstimos e financiamentos |
 | 📋 Plano de Contas | Categorização personalizada de despesas |
-| 📊 Visão Financeira | Projeção de saldo para os próximos meses |
-| 🔄 Fluxo de Caixa | Resumo de receitas × despesas com gráficos |
+| 📊 Visão Financeira | Projeção de saldo para os próximos 5 anos |
+| 🔄 Fluxo de Caixa | Resumo de receitas × despesas com extrato detalhado |
 | 📈 Investimentos | Carteira de renda variável, fixa e fundos com cálculo de IR |
 | 🎯 Metas | Acompanhamento de objetivos financeiros com barra de progresso |
+| 🔔 Alertas | Notificações automáticas de contas vencidas, faturas e recebíveis |
 | 💾 Backup | Backup e restauração local dos dados |
 
 ### Destaques
@@ -35,6 +39,8 @@ A partir daí, tudo fica salvo localmente no seu computador, de forma segura e p
 - **Sem assinatura** — instala uma vez e usa para sempre
 - **Dados de demonstração** — 8 perfis prontos para explorar o sistema sem cadastrar nada
 - **Exportação Excel** — cada módulo gera `.xlsx` formatado com totais e cores
+- **Importação de fatura** — importe extratos CSV/XLSX do banco com detecção automática de parcelas
+- **Vendas integradas** — receitas de vendas entram automaticamente no Fluxo de Caixa
 - **Backup Google Drive** *(opcional)* — integração configurável para salvar na nuvem
 
 ---
@@ -122,7 +128,8 @@ serenus/
 │   ├── setup_view.py         # Wizard de configuração inicial (primeiro acesso)
 │   ├── contas_pagar/         # Módulo Contas a Pagar
 │   ├── receitas/             # Módulo Minhas Receitas
-│   ├── cartoes/              # Módulo Cartões
+│   ├── cartoes/              # Módulo Cartões (+ importação de fatura)
+│   ├── vendas/               # Módulo Vendas e Serviços
 │   ├── visao_longo_prazo/    # Módulo Dívidas
 │   ├── visao_futura/         # Módulo Visão Financeira
 │   ├── fluxo_caixa/          # Módulo Fluxo de Caixa
@@ -153,12 +160,27 @@ pytest tests/ -v
 
 Todos os testes usam banco em memória — nenhum dado real é afetado.
 
+**Cobertura atual: 333 testes — 333/333 passando.**
+
 ---
 
 ## Como gerar o instalador
 
 Consulte [`docs/BUILD.md`](docs/BUILD.md) para o passo a passo completo usando
 PyInstaller + Inno Setup.
+
+---
+
+## Novidades da v2.0
+
+- **Importação de fatura CSV/XLSX** — importe extratos do banco diretamente no módulo Cartões.
+  O sistema detecta parcelas (ex: "7/12"), cria o histórico de parcelas já pagas e gera
+  automaticamente as próximas pendentes e contas a pagar correspondentes.
+- **Módulo Vendas** — registre vendas de produtos e serviços à vista ou a prazo.
+  Vendas à vista entram no Fluxo de Caixa imediatamente; vendas a prazo entram conforme
+  os recebimentos são quitados.
+- **Alertas de recebíveis** — notificações para contas a receber vencidas ou vencendo.
+- **Template XLSX** — baixe o modelo de planilha para preenchimento e importação de fatura.
 
 ---
 

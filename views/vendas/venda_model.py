@@ -348,12 +348,17 @@ def listar_contas_receber(status: str | None = None) -> list[ContaReceber]:
 
 
 def marcar_recebido(id: int, data_recebimento: str) -> None:
+    """Marca uma parcela como recebida. No-op se já estiver recebida ou cancelada
+    — evita ressuscitar parcelas canceladas ou sobrescrever data_recebimento."""
     with conectar() as conn:
-        conn.execute(
+        cur = conn.execute(
             "UPDATE contas_a_receber"
-            " SET status='recebido', data_recebimento=? WHERE id=?",
+            " SET status='recebido', data_recebimento=?"
+            " WHERE id=? AND status='pendente'",
             (data_recebimento, id),
         )
+        if cur.rowcount == 0:
+            return
         row = conn.execute(
             "SELECT venda_id FROM contas_a_receber WHERE id=?", (id,)
         ).fetchone()

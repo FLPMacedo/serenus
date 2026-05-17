@@ -13,10 +13,22 @@ class MetasView(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent")
         self._cores = get_tema(obter_configuracao("tema", "claro"))
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self._build_header()
+        self._build_banner()
         self._build_corpo()
         self._carregar()
+
+    def _build_banner(self):
+        from views.widgets.ajuda import banner_ajuda
+        b = banner_ajuda(
+            self, self._cores,
+            "Defina objetivos financeiros (viagem, reserva, etc.). O sistema "
+            "calcula quanto poupar por mês para chegar no prazo e mostra "
+            "barra de progresso a cada depósito.",
+        )
+        if b:
+            b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
 
     # ─────────────────────────────────────────────────────────────────────
     # Layout
@@ -49,7 +61,7 @@ class MetasView(ctk.CTkFrame):
 
     def _build_corpo(self):
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self._scroll.grid(row=1, column=0, sticky="nsew", padx=20, pady=16)
+        self._scroll.grid(row=2, column=0, sticky="nsew", padx=20, pady=16)
         self._scroll.grid_columnconfigure(0, weight=1)
 
     def _exportar_excel(self):

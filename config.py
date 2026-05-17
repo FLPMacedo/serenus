@@ -240,14 +240,22 @@ def formatar_data_exibicao(data_iso: str) -> str:
 
 
 def parsear_data(data_br: str) -> str:
-    """Converte DD/MM/AAAA para YYYY-MM-DD para gravação no banco."""
+    """Converte DD/MM/AAAA para YYYY-MM-DD para gravação no banco.
+
+    Retorna string vazia se a entrada for vazia OU representar uma data inválida
+    (ex.: "31/02/2025"). Callers usam `if not data_iso:` para detectar erro.
+    """
     if not data_br:
         return ""
     try:
+        from datetime import date as _date
         parts = data_br.split("/")
-        return f"{parts[2]}-{parts[1]}-{parts[0]}"
-    except (IndexError, AttributeError):
-        return data_br
+        if len(parts) != 3:
+            return ""
+        dia, mes, ano = int(parts[0]), int(parts[1]), int(parts[2])
+        return _date(ano, mes, dia).isoformat()
+    except (IndexError, AttributeError, ValueError, TypeError):
+        return ""
 
 
 if __name__ == "__main__":

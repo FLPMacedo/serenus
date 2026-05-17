@@ -51,7 +51,12 @@ def _base_fixas_projecao() -> float:
 
 
 def _desp_reais_mes(ano: int, mes_num: int) -> tuple[float, float]:
-    """Retorna (fixas, variaveis) reais do banco para o mês dado."""
+    """Retorna (fixas, variaveis) reais do banco para o mês dado.
+
+    Exclui despesas cuja categoria é 'Cartão de Crédito' — essas já são contadas
+    em `_parcelas_cartao_mes()` via tabela `parcelas_cartao`. Contá-las também
+    aqui causaria dupla contagem em `total_saidas`.
+    """
     inicio = f"{ano:04d}-{mes_num:02d}-01"
     fim = f"{ano:04d}-{mes_num+1:02d}-01" if mes_num < 12 else f"{ano+1:04d}-01-01"
     with conectar() as conn:
@@ -61,6 +66,7 @@ def _desp_reais_mes(ano: int, mes_num: int) -> tuple[float, float]:
             JOIN   plano_contas pc ON pc.id = cp.plano_conta_id
             WHERE  cp.status != 'cancelado'
               AND  cp.data_vencimento >= ? AND cp.data_vencimento < ?
+              AND  COALESCE(pc.categoria,'') != 'Cartão de Crédito'
             GROUP BY pc.tipo_custo
         """, (inicio, fim)).fetchall()
     fixas = variaveis = 0.0
@@ -265,6 +271,7 @@ def carregar_detalhes(projecao: list[MesProjecao]) -> DetalheProjecao:
             JOIN   plano_contas pc ON pc.id = cp.plano_conta_id
             WHERE  cp.status != 'cancelado'
               AND  cp.data_vencimento >= ? AND cp.data_vencimento < ?
+              AND  COALESCE(pc.categoria,'') != 'Cartão de Crédito'
             GROUP  BY mes_ref, pc.id
             ORDER  BY total DESC
         """, (dt_start, dt_end)).fetchall()

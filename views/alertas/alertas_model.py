@@ -91,6 +91,7 @@ def _faturas_cartao() -> list[Alerta]:
             JOIN   cartoes c ON c.id = p.cartao_id
             WHERE  p.mes_referencia = ?
               AND  p.status = 'pendente'
+              AND  c.ativo = 1
             GROUP BY p.cartao_id
         """, (mes_atual,)).fetchall()
 

@@ -11,7 +11,7 @@
 ; O instalador final será gerado em: instalador\output\SerenusSetup.exe
 
 #define MyAppName      "Serenus"
-#define MyAppVersion   "1.0.0"
+#define MyAppVersion   "2.1.0"
 #define MyAppPublisher "Serenus"
 #define MyAppURL       "https://github.com/seu-usuario/serenus"
 #define MyAppExeName   "Serenus.exe"
@@ -29,19 +29,15 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-; Diretório de saída do instalador
 OutputDir=output
 OutputBaseFilename=SerenusSetup
 SetupIconFile={#MyAppIcon}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
-; Requer Windows 10 ou superior
 MinVersion=10.0
-; Não requer privilégios de administrador — instala por usuário
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-; Associações e atalhos não precisam de admin
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 
@@ -49,20 +45,18 @@ UninstallDisplayName={#MyAppName}
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 
 [Tasks]
-Name: "desktopicon";   Description: "Criar ícone na Área de Trabalho"; GroupDescription: "Ícones adicionais:"; Flags: unchecked
-Name: "startupicon";   Description: "Iniciar com o Windows";            GroupDescription: "Ícones adicionais:"; Flags: unchecked
+Name: "desktopicon"; Description: "Criar ícone na Área de Trabalho"; GroupDescription: "Ícones adicionais:"; Flags: unchecked
+Name: "startupicon"; Description: "Iniciar com o Windows";            GroupDescription: "Ícones adicionais:"; Flags: unchecked
 
 [Files]
-; Executável principal (gerado pelo PyInstaller)
 Source: "{#DistDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}";                    Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
-Name: "{group}\Desinstalar {#MyAppName}";        Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}";              Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}";             Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
+Name: "{group}\Desinstalar {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\{#MyAppName}";       Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
-; Inicialização com o Windows (opcional)
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "{#MyAppName}"; \
   ValueData: """{app}\{#MyAppExeName}"""; \
@@ -74,6 +68,4 @@ Filename: "{app}\{#MyAppExeName}"; \
   Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; Não apaga os dados do usuário em %APPDATA%\Serenus — preserva banco e backups
-; Se quiser remover tudo, descomente as linhas abaixo:
-; Type: filesandordirs; Name: "{userappdata}\Serenus"
+; Dados do usuário em %APPDATA%\Serenus são preservados na desinstalação

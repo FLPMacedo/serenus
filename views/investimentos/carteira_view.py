@@ -31,7 +31,7 @@ class InvestimentosView(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent")
         self._cores = get_tema(obter_configuracao("tema", "claro"))
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
         # Cabeçalho
         hdr = ctk.CTkFrame(self, fg_color="transparent")
@@ -42,9 +42,21 @@ class InvestimentosView(ctk.CTkFrame):
             text_color=self._cores["texto"],
         ).pack(side="left")
 
+        # Banner de ajuda
+        from views.widgets.ajuda import banner_ajuda
+        _b = banner_ajuda(
+            self, self._cores,
+            "Acompanhe sua carteira de ações, FIIs, renda fixa e fundos. "
+            "Cadastre contas e ativos em 'Ativos / Contas', registre compras "
+            "e vendas em 'Movimentações' — o sistema calcula custo médio, "
+            "lucro realizado e IR estimado.",
+        )
+        if _b:
+            _b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
+
         # Tab view
         self._tabs = ctk.CTkTabview(self, fg_color=self._cores["fundo"])
-        self._tabs.grid(row=1, column=0, sticky="nsew", padx=10, pady=(4, 10))
+        self._tabs.grid(row=2, column=0, sticky="nsew", padx=10, pady=(4, 10))
         for nome in ("Carteira", "Movimentações", "Dashboard", "Ativos / Contas"):
             self._tabs.add(nome)
 

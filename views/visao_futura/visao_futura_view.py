@@ -18,7 +18,6 @@ class VisaoFuturaView(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent")
         self._cores = get_tema(obter_configuracao("tema", "claro"))
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
 
         ctk.CTkLabel(
             self, text="📊  Visão Financeira",
@@ -26,7 +25,20 @@ class VisaoFuturaView(ctk.CTkFrame):
             text_color=self._cores["texto"],
         ).grid(row=0, column=0, sticky="w", padx=20, pady=(16, 0))
 
-        _ProjecaoTab(self, self._cores, grid_row=1)
+        from views.widgets.ajuda import banner_ajuda
+        _b = banner_ajuda(
+            self, self._cores,
+            "Projeção mês a mês dos próximos 5 anos. Cores indicam o saldo "
+            "previsto: verde sobra, amarelo apertado, vermelho déficit. "
+            "Clique em uma categoria para ver os sub-itens que a compõem.",
+        )
+        if _b:
+            _b.grid(row=1, column=0, sticky="ew", padx=20, pady=(8, 0))
+            grid_row = 2
+        else:
+            grid_row = 1
+
+        _ProjecaoTab(self, self._cores, grid_row=grid_row)
 
 
 # ---------------------------------------------------------------------------
