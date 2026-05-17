@@ -37,112 +37,110 @@ ARQUIVOS = [
 CSS = """
 @page {
     size: A4;
-    margin: 2.2cm 1.8cm;
+    margin: 1.4cm 1.4cm 1.6cm 1.4cm;
     @frame footer_frame {
         -pdf-frame-content: footer_content;
-        left: 50pt; width: 500pt; top: 800pt; height: 30pt;
+        left: 50pt; width: 500pt; top: 805pt; height: 22pt;
     }
 }
 body {
     font-family: Helvetica, Arial, sans-serif;
-    font-size: 10.5pt;
+    font-size: 10pt;
     color: #1F2937;
-    line-height: 1.55;
+    line-height: 1.35;
 }
 h1 {
     color: #1A56DB;
-    font-size: 22pt;
-    margin-top: 0;
-    padding-bottom: 8pt;
+    font-size: 20pt;
+    margin: 0 0 4pt 0;
+    padding-bottom: 4pt;
     border-bottom: 2px solid #DBEAFE;
     -pdf-keep-with-next: true;
 }
 h2 {
     color: #1A56DB;
-    font-size: 16pt;
-    margin-top: 22pt;
-    padding-bottom: 4pt;
+    font-size: 14pt;
+    margin: 14pt 0 4pt 0;
+    padding-bottom: 2pt;
     border-bottom: 1px solid #E5E7EB;
     -pdf-keep-with-next: true;
-    page-break-before: always;
 }
-h2:first-of-type { page-break-before: avoid; }
 h3 {
     color: #075985;
-    font-size: 13pt;
-    margin-top: 16pt;
+    font-size: 12pt;
+    margin: 10pt 0 3pt 0;
     -pdf-keep-with-next: true;
 }
 h4 {
     color: #374151;
-    font-size: 11.5pt;
-    margin-top: 12pt;
+    font-size: 10.5pt;
+    margin: 8pt 0 2pt 0;
     -pdf-keep-with-next: true;
 }
-p { margin: 6pt 0; }
-ul, ol { margin: 6pt 0 6pt 18pt; padding: 0; }
-li { margin: 3pt 0; }
+p { margin: 3pt 0; }
+ul, ol { margin: 3pt 0 3pt 16pt; padding: 0; }
+li { margin: 1pt 0; }
 strong { color: #111827; }
 em { color: #374151; }
 code {
     font-family: "Courier New", monospace;
-    font-size: 9.5pt;
+    font-size: 9pt;
     background-color: #F3F4F6;
     padding: 1pt 3pt;
     color: #6D28D9;
 }
 pre {
     font-family: "Courier New", monospace;
-    font-size: 9.5pt;
+    font-size: 9pt;
     background-color: #F3F4F6;
     border-left: 3px solid #1A56DB;
-    padding: 8pt 10pt;
-    margin: 8pt 0;
+    padding: 5pt 8pt;
+    margin: 4pt 0;
     color: #111827;
+    line-height: 1.25;
 }
 table {
     border-collapse: collapse;
     width: 100%;
-    margin: 10pt 0;
-    font-size: 9.5pt;
+    margin: 5pt 0;
+    font-size: 9pt;
 }
 th {
     background-color: #1A56DB;
     color: #FFFFFF;
-    padding: 6pt 8pt;
+    padding: 4pt 6pt;
     text-align: left;
     border: 1px solid #1A56DB;
 }
 td {
-    padding: 5pt 8pt;
+    padding: 3pt 6pt;
     border: 1px solid #E5E7EB;
     vertical-align: top;
 }
 tr:nth-child(even) td { background-color: #F9FAFB; }
 img {
-    max-width: 100%;
-    margin: 8pt 0;
+    max-width: 92%;
+    margin: 4pt 0;
     border: 1px solid #E5E7EB;
 }
 blockquote {
     border-left: 3px solid #1A56DB;
     background-color: #EFF6FF;
-    padding: 8pt 12pt;
-    margin: 10pt 0;
+    padding: 4pt 10pt;
+    margin: 5pt 0;
     color: #1E3A8A;
     font-style: italic;
 }
 hr {
     border: none;
     border-top: 1px solid #E5E7EB;
-    margin: 14pt 0;
+    margin: 8pt 0;
 }
 a { color: #1A56DB; text-decoration: underline; }
 .subtitle {
     color: #6B7280;
-    font-size: 11pt;
-    margin-top: -10pt;
-    margin-bottom: 20pt;
+    font-size: 10pt;
+    margin: 0 0 10pt 0;
 }
 """
 
