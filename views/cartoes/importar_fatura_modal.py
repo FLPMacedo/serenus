@@ -14,16 +14,18 @@ from views.cartoes.cartao_model import Cartao
 
 
 class ImportarFaturaModal(ctk.CTkToplevel):
-    def __init__(self, parent, cartao: Cartao, on_importado=None):
+    def __init__(self, parent, cartao: Cartao | None = None, on_importado=None):
         super().__init__(parent)
-        self._cartao    = cartao
+        self._cartao       = cartao
         self._on_importado = on_importado
-        self._cores     = get_tema(obter_configuracao("tema", "claro"))
-        self._linhas    = []    # linhas lidas do arquivo
-        self._arquivo   = ""
+        self._cores        = get_tema(obter_configuracao("tema", "claro"))
+        self._linhas: list = []
+        self._arquivo      = ""
+        self._cartoes_map: dict[str, int] = {}  # "Nome" → id
 
-        self.title(f"Serenus — Importar Fatura · {cartao.nome}")
-        self.geometry("700x620")
+        titulo = f"Serenus — Importar Fatura · {cartao.nome}" if cartao else "Serenus — Importar Fatura de Cartão"
+        self.title(titulo)
+        self.geometry("700x660")
         self.resizable(True, True)
         self.grab_set()
 
@@ -41,8 +43,10 @@ class ImportarFaturaModal(ctk.CTkToplevel):
         # ── Cabeçalho ──────────────────────────────────────────────────
         hdr = ctk.CTkFrame(self, fg_color=cores["sidebar"], corner_radius=0)
         hdr.grid(row=0, column=0, sticky="ew")
+        titulo_hdr = (f"⬆  Importar Fatura — {self._cartao.nome}"
+                      if self._cartao else "⬆  Importar Fatura de Cartão")
         ctk.CTkLabel(hdr,
-                     text=f"⬆  Importar Fatura — {self._cartao.nome}",
+                     text=titulo_hdr,
                      font=ctk.CTkFont(size=16, weight="bold"),
                      text_color=cores["primario"]).pack(pady=14, padx=20, anchor="w")
 
@@ -51,15 +55,34 @@ class ImportarFaturaModal(ctk.CTkToplevel):
         ctrl.grid(row=1, column=0, sticky="ew", padx=16, pady=(10, 0))
         ctrl.grid_columnconfigure(1, weight=1)
 
+        # Seletor de cartão (visível apenas quando não foi passado cartão)
+        if self._cartao is None:
+            from views.cartoes.cartao_model import listar_cartoes
+            todos = listar_cartoes(apenas_ativos=True)
+            self._cartoes_map = {c.nome: c.id for c in todos}
+            nomes = list(self._cartoes_map.keys())
+            if not nomes:
+                nomes = ["(nenhum cartão cadastrado)"]
+            ctk.CTkLabel(ctrl, text="Cartão:",
+                         text_color=cores["texto"]).grid(row=0, column=0, sticky="w", padx=(0, 8))
+            self._var_cartao = ctk.StringVar(value=nomes[0])
+            ctk.CTkComboBox(ctrl, values=nomes, variable=self._var_cartao,
+                            width=200).grid(row=0, column=1, sticky="w")
+            row_offset = 1
+        else:
+            row_offset = 0
+
         # Mês de referência da fatura
         ctk.CTkLabel(ctrl, text="Mês da fatura:",
-                     text_color=cores["texto"]).grid(row=0, column=0, sticky="w", padx=(0, 8))
+                     text_color=cores["texto"]).grid(row=row_offset, column=0, sticky="w", padx=(0, 8))
 
         hoje = date.today()
-        meses = [f"{NOMES_MESES[m]} {hoje.year}" for m in range(12)]
-        self._var_mes = ctk.StringVar(value=meses[hoje.month - 1])
-        combo_mes = ctk.CTkComboBox(ctrl, values=meses, variable=self._var_mes, width=160)
-        combo_mes.grid(row=0, column=1, sticky="w")
+        anos = [hoje.year - 1, hoje.year, hoje.year + 1]
+        meses = [f"{NOMES_MESES[m]} {a}" for a in anos for m in range(12)]
+        mes_atual = f"{NOMES_MESES[hoje.month - 1]} {hoje.year}"
+        self._var_mes = ctk.StringVar(value=mes_atual)
+        combo_mes = ctk.CTkComboBox(ctrl, values=meses, variable=self._var_mes, width=180)
+        combo_mes.grid(row=row_offset, column=1, sticky="w")
 
         # Checkbox criar histórico
         self._var_historico = ctk.BooleanVar(value=True)
@@ -67,7 +90,7 @@ class ImportarFaturaModal(ctk.CTkToplevel):
                         text="Criar histórico das parcelas já pagas",
                         variable=self._var_historico,
                         font=ctk.CTkFont(size=12),
-                        text_color=cores["texto"]).grid(row=0, column=2, padx=16)
+                        text_color=cores["texto"]).grid(row=row_offset, column=2, padx=16)
 
         # Botões de arquivo
         btns = ctk.CTkFrame(self, fg_color="transparent")
@@ -237,11 +260,22 @@ class ImportarFaturaModal(ctk.CTkToplevel):
                 pass
         return f"{hoje.year:04d}-{hoje.month:02d}"
 
+    def _cartao_id_selecionado(self) -> int | None:
+        if self._cartao:
+            return self._cartao.id
+        nome = self._var_cartao.get()
+        return self._cartoes_map.get(nome)
+
     def _importar(self):
         from views.cartoes.importar_fatura_model import parsear_parcela
         from views.cartoes.cartao_model import importar_compra_fatura
 
         if not self._linhas:
+            return
+
+        cartao_id = self._cartao_id_selecionado()
+        if not cartao_id:
+            self._lbl_erros.configure(text="Selecione um cartão antes de importar.")
             return
 
         mes_ref     = self._mes_referencia_selecionado()
@@ -255,7 +289,7 @@ class ImportarFaturaModal(ctk.CTkToplevel):
                 parcela_str = linha.get("parcela", "")
                 num_parc, total_parc = parsear_parcela(parcela_str)
                 dados = {
-                    "cartao_id":        self._cartao.id,
+                    "cartao_id":        cartao_id,
                     "descricao":        linha["descricao"],
                     "estabelecimento":  linha.get("estabelecimento", ""),
                     "categoria":        linha.get("categoria", ""),

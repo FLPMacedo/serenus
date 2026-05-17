@@ -41,8 +41,13 @@ class CartoesView(ctk.CTkFrame):
                         variable=self._var_inativos,
                         command=self._carregar).grid(row=0, column=1, padx=12, sticky="e")
 
+        ctk.CTkButton(header, text="⬆ Importar Fatura", height=32,
+                      fg_color="transparent", border_width=1,
+                      border_color=cores["primario"], text_color=cores["primario"],
+                      command=self._importar_fatura_global).grid(row=0, column=2, padx=8, sticky="e")
+
         ctk.CTkButton(header, text="+ Novo Cartão", height=32,
-                      command=self._novo_cartao).grid(row=0, column=2, sticky="e")
+                      command=self._novo_cartao).grid(row=0, column=3, sticky="e")
 
     def _build_conteudo(self):
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
@@ -215,6 +220,12 @@ class CartoesView(ctk.CTkFrame):
     def _importar_fatura(self, cartao: Cartao):
         from views.cartoes.importar_fatura_modal import ImportarFaturaModal
         ImportarFaturaModal(self, cartao=cartao,
+                            on_importado=lambda msg: (self._carregar(),
+                                                      self._toast(msg)))
+
+    def _importar_fatura_global(self):
+        from views.cartoes.importar_fatura_modal import ImportarFaturaModal
+        ImportarFaturaModal(self, cartao=None,
                             on_importado=lambda msg: (self._carregar(),
                                                       self._toast(msg)))
 
