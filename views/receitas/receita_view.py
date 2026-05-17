@@ -395,25 +395,32 @@ class _MensalTab(ctk.CTkFrame):
 
         dados = total_previsto_mes(self._mes_0, self._ano)
 
+        # --- Vendas e Serviços realizados no mês ---
+        total_vendas, vendas_itens = self._carregar_vendas_mes()
+
         # --- Card total ---
         card_total = ctk.CTkFrame(self._scroll, fg_color=cores["primario"], corner_radius=10)
         card_total.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(card_total, text="Total previsto do mês",
+        ctk.CTkLabel(card_total, text="Total do mês",
                      text_color="#FFFFFF", font=ctk.CTkFont(size=12)).pack(pady=(10, 2))
         ctk.CTkLabel(card_total,
-                     text=formatar_moeda(dados["total"]),
+                     text=formatar_moeda(dados["total"] + total_vendas),
                      text_color="#FFFFFF",
                      font=ctk.CTkFont(size=28, weight="bold")).pack(pady=(0, 10))
 
         # Sub-cards
         sub = ctk.CTkFrame(self._scroll, fg_color="transparent")
         sub.pack(fill="x", pady=(0, 16))
-        sub.grid_columnconfigure((0, 1), weight=1)
+        n_cols = 3 if total_vendas > 0 else 2
+        sub.grid_columnconfigure(tuple(range(n_cols)), weight=1)
 
         self._mini_card(sub, "Fontes recorrentes",
                         formatar_moeda(dados["total_fontes"]), 0)
         self._mini_card(sub, f"Receitas especiais ({len(dados['especiais'])})",
                         formatar_moeda(dados["total_especiais"]), 1)
+        if total_vendas > 0:
+            self._mini_card(sub, "Vendas e Serviços",
+                            formatar_moeda(total_vendas), 2)
 
         # --- Fontes ---
         if dados["fontes"]:
@@ -443,10 +450,75 @@ class _MensalTab(ctk.CTkFrame):
                     destaque=True,
                 )
 
-        if not dados["fontes"] and not dados["especiais"]:
+        # --- Vendas e Serviços ---
+        if total_vendas > 0:
+            ctk.CTkLabel(self._scroll, text="Vendas e Serviços realizados",
+                         font=ctk.CTkFont(size=14, weight="bold"),
+                         text_color=cores["positivo"],
+                         anchor="w").pack(fill="x", pady=(12, 4))
+            for item in vendas_itens:
+                self._linha_receita(
+                    nome=item["descricao"],
+                    subtipo=item["subtipo"],
+                    valor=item["valor"],
+                    destaque=False,
+                )
+
+        if not dados["fontes"] and not dados["especiais"] and total_vendas == 0:
             ctk.CTkLabel(self._scroll,
                          text="Nenhuma receita cadastrada para este mês.",
                          text_color=cores["texto_mudo"]).pack(pady=24)
+
+    def _carregar_vendas_mes(self) -> tuple[float, list[dict]]:
+        """Retorna (total, lista de itens) de vendas realizadas no mês selecionado."""
+        mes_num = self._mes_0 + 1
+        inicio  = f"{self._ano:04d}-{mes_num:02d}-01"
+        fim     = (f"{self._ano:04d}-{mes_num+1:02d}-01"
+                   if mes_num < 12 else f"{self._ano+1:04d}-01-01")
+        try:
+            from database import conectar
+            with conectar() as conn:
+                avista_rows = conn.execute("""
+                    SELECT COALESCE(descricao, 'Venda') AS desc, valor_liquido AS valor
+                    FROM vendas
+                    WHERE tipo_pagamento='avista' AND status='paga'
+                      AND data_venda >= ? AND data_venda < ?
+                    ORDER BY data_venda
+                """, (inicio, fim)).fetchall()
+                aprazo_rows = conn.execute("""
+                    SELECT descricao,
+                           numero_parcela, total_parcelas,
+                           data_recebimento, valor
+                    FROM contas_a_receber
+                    WHERE status='recebido'
+                      AND data_recebimento >= ? AND data_recebimento < ?
+                    ORDER BY data_recebimento
+                """, (inicio, fim)).fetchall()
+        except Exception:
+            return 0.0, []
+
+        itens: list[dict] = []
+        total = 0.0
+
+        for r in avista_rows:
+            itens.append({
+                "descricao": r["desc"],
+                "subtipo":   "À vista",
+                "valor":     float(r["valor"]),
+            })
+            total += float(r["valor"])
+
+        for r in aprazo_rows:
+            parc = (f"Parcela {r['numero_parcela']}/{r['total_parcelas']}"
+                    if r["total_parcelas"] > 1 else "À vista")
+            itens.append({
+                "descricao": r["descricao"],
+                "subtipo":   f"{parc} · Recebido em {r['data_recebimento']}",
+                "valor":     float(r["valor"]),
+            })
+            total += float(r["valor"])
+
+        return total, itens
 
     def _mini_card(self, parent, titulo: str, valor: str, col: int):
         cores = self._cores

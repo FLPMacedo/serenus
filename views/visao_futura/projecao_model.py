@@ -72,6 +72,29 @@ def _desp_reais_mes(ano: int, mes_num: int) -> tuple[float, float]:
     return fixas, variaveis
 
 
+def _receitas_vendas_mes(ano: int, mes_num: int) -> float:
+    """Soma vendas à vista pagas + recebíveis quitados neste mês."""
+    inicio = f"{ano:04d}-{mes_num:02d}-01"
+    fim    = f"{ano:04d}-{mes_num+1:02d}-01" if mes_num < 12 else f"{ano+1:04d}-01-01"
+    try:
+        with conectar() as conn:
+            avista = conn.execute("""
+                SELECT COALESCE(SUM(valor_liquido), 0)
+                FROM vendas
+                WHERE tipo_pagamento='avista' AND status='paga'
+                  AND data_venda >= ? AND data_venda < ?
+            """, (inicio, fim)).fetchone()[0]
+            aprazo = conn.execute("""
+                SELECT COALESCE(SUM(valor), 0)
+                FROM contas_a_receber
+                WHERE status='recebido'
+                  AND data_recebimento >= ? AND data_recebimento < ?
+            """, (inicio, fim)).fetchone()[0]
+        return float(avista or 0) + float(aprazo or 0)
+    except Exception:
+        return 0.0
+
+
 def _parcelas_cartao_mes(mes_ref: str) -> float:
     """Soma das parcelas_cartao para um mes_referencia ('YYYY-MM')."""
     with conectar() as conn:
@@ -122,6 +145,8 @@ def projetar(meses: int = 60, inicio_offset: int = 0) -> list[MesProjecao]:
             elif f.periodicidade == "anual":
                 rec += f.valor_mensal / 12
         rec += esp_por_mes.get(mes_num - 1, 0.0)
+        if not is_futuro:
+            rec += _receitas_vendas_mes(ano, mes_num)
 
         # Despesas: usa dados reais para passado/atual, projeção para futuro
         if not is_futuro:
@@ -208,6 +233,19 @@ def carregar_detalhes(projecao: list[MesProjecao]) -> DetalheProjecao:
             if e.mes == m.mes_num - 1:   # e.mes é 0-indexed
                 receitas.setdefault(e.nome, [0.0] * n)
                 receitas[e.nome][m_i] += e.valor
+
+    # ── Vendas e Serviços (meses reais) ──────────────────────────────────
+    try:
+        vendas_vals = [0.0] * n
+        for m_i, m in enumerate(projecao):
+            if not m.is_futuro:
+                v = _receitas_vendas_mes(m.ano, m.mes_num)
+                if v > 0:
+                    vendas_vals[m_i] = v
+        if any(v > 0 for v in vendas_vals):
+            receitas["Vendas e Serviços"] = vendas_vals
+    except Exception:
+        pass
 
     # ── Despesas reais (passado e futuro com lançamentos) ─────────────────
     first, last = projecao[0], projecao[-1]
