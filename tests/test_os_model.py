@@ -520,3 +520,28 @@ class TestImprimirOS:
         imprimir_os_pdf(obter_os(oid), destino)
         from pathlib import Path as _P
         assert _P(destino).exists()
+
+    def test_atualizar_os_atomico_historico_consistente_com_dados(self, banco):
+        """atualizar_os deve ler o estado e fazer UPDATE na mesma conexão —
+        senão entre o obter_os e o UPDATE outro processo pode alterar."""
+        from views.os.os_model import (
+            atualizar_os, listar_historico, obter_os, salvar_os,
+        )
+        oid = salvar_os(_dados_os(), [])
+
+        # Atualiza um campo
+        novos = {**_dados_os(), "responsavel": "Pedro"}
+        atualizar_os(oid, novos, [])
+
+        # Histórico deve refletir mudança exatamente
+        hist = listar_historico(oid)
+        evento_resp = next(
+            (h for h in hist if h.campo == "responsavel"), None
+        )
+        assert evento_resp is not None
+        assert evento_resp.valor_anterior == ""
+        assert evento_resp.valor_novo == "Pedro"
+
+        # Estado final correto
+        atual = obter_os(oid)
+        assert atual.responsavel == "Pedro"

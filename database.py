@@ -264,9 +264,23 @@ def inicializar_banco():
     """)
 
     cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS clientes (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome        TEXT    NOT NULL,
+            documento   TEXT    DEFAULT '',
+            telefone    TEXT    DEFAULT '',
+            whatsapp    TEXT    DEFAULT '',
+            email       TEXT    DEFAULT '',
+            cep         TEXT    DEFAULT '',
+            endereco    TEXT    DEFAULT '',
+            observacao  TEXT    DEFAULT '',
+            criado_em   TEXT    NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS ordens_servico (
             id                 INTEGER PRIMARY KEY AUTOINCREMENT,
             numero             TEXT    NOT NULL UNIQUE,
+            cliente_id         INTEGER REFERENCES clientes(id),
             solicitante_nome   TEXT    NOT NULL DEFAULT '',
             solicitante_setor  TEXT    DEFAULT '',
             solicitante_ramal  TEXT    DEFAULT '',
@@ -428,11 +442,27 @@ def _migrar_tabelas_os(conn: sqlite3.Connection):
             "SELECT name FROM sqlite_master WHERE type='table'"
         ).fetchall()
     }
+    if "clientes" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS clientes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome        TEXT    NOT NULL,
+                documento   TEXT    DEFAULT '',
+                telefone    TEXT    DEFAULT '',
+                whatsapp    TEXT    DEFAULT '',
+                email       TEXT    DEFAULT '',
+                cep         TEXT    DEFAULT '',
+                endereco    TEXT    DEFAULT '',
+                observacao  TEXT    DEFAULT '',
+                criado_em   TEXT    NOT NULL
+            )
+        """)
     if "ordens_servico" not in tabelas_existentes:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS ordens_servico (
                 id                 INTEGER PRIMARY KEY AUTOINCREMENT,
                 numero             TEXT    NOT NULL UNIQUE,
+                cliente_id         INTEGER REFERENCES clientes(id),
                 solicitante_nome   TEXT    NOT NULL DEFAULT '',
                 solicitante_setor  TEXT    DEFAULT '',
                 solicitante_ramal  TEXT    DEFAULT '',
@@ -449,6 +479,16 @@ def _migrar_tabelas_os(conn: sqlite3.Connection):
                 criado_em          TEXT    NOT NULL
             )
         """)
+    else:
+        # Tabela já existe (banco antigo) — adiciona cliente_id se faltar
+        cols_os = {r[1] for r in conn.execute(
+            "PRAGMA table_info(ordens_servico)"
+        ).fetchall()}
+        if "cliente_id" not in cols_os:
+            conn.execute(
+                "ALTER TABLE ordens_servico"
+                " ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)"
+            )
     if "itens_os" not in tabelas_existentes:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS itens_os (
@@ -746,6 +786,7 @@ def zerar_dados():
             DELETE FROM os_historico;
             DELETE FROM itens_os;
             DELETE FROM ordens_servico;
+            DELETE FROM clientes;
             DELETE FROM produtos;
         """)
         conn.execute("""
