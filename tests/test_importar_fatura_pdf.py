@@ -139,3 +139,139 @@ class TestClassesDeErro:
             assert issubclass(cls, Exception)
             inst = cls("mensagem teste")
             assert "mensagem teste" in str(inst)
+
+
+# ---------------------------------------------------------------------------
+# Etapa 2 — Parser base, registry e GenericoParser
+# ---------------------------------------------------------------------------
+
+class TestRegistry:
+    def test_pdfparser_e_abstrato(self):
+        from views.cartoes.pdf_parsers.base import PDFParser
+        with pytest.raises(TypeError):
+            PDFParser()  # ABC não pode ser instanciado direto
+
+    def test_generico_registrado_por_padrao(self):
+        from views.cartoes.pdf_parsers import todos_parsers
+        nomes = [p.nome_layout for p in todos_parsers()]
+        assert "generico" in nomes
+
+    def test_generico_e_ultimo_da_fila(self):
+        from views.cartoes.pdf_parsers import todos_parsers
+        parsers = todos_parsers()
+        assert parsers[-1].nome_layout == "generico"
+
+    def test_registrar_parser_insere_antes_do_generico(self):
+        from views.cartoes.pdf_parsers import registrar, todos_parsers, _PARSERS
+        from views.cartoes.pdf_parsers.base import PDFParser
+
+        class FakeParser(PDFParser):
+            nome_layout = "fake_test_only"
+            def reconhece(self, texto): return False
+            def extrair(self, texto):   return []
+
+        try:
+            registrar(FakeParser())
+            parsers = todos_parsers()
+            nomes = [p.nome_layout for p in parsers]
+            assert nomes.index("fake_test_only") < nomes.index("generico")
+        finally:
+            # Limpa o estado
+            _PARSERS[:] = [p for p in _PARSERS
+                           if p.nome_layout != "fake_test_only"]
+
+    def test_re_registrar_substitui_anterior(self):
+        """Registrar 2x o mesmo nome_layout não deve duplicar."""
+        from views.cartoes.pdf_parsers import registrar, todos_parsers, _PARSERS
+        from views.cartoes.pdf_parsers.base import PDFParser
+
+        class FakeV1(PDFParser):
+            nome_layout = "fake_dup"
+            def reconhece(self, texto): return False
+            def extrair(self, texto):   return []
+
+        class FakeV2(PDFParser):
+            nome_layout = "fake_dup"
+            def reconhece(self, texto): return True
+            def extrair(self, texto):   return [{"a": 1}]
+
+        try:
+            registrar(FakeV1())
+            registrar(FakeV2())
+            parsers = todos_parsers()
+            duplicados = [p for p in parsers if p.nome_layout == "fake_dup"]
+            assert len(duplicados) == 1
+        finally:
+            _PARSERS[:] = [p for p in _PARSERS if p.nome_layout != "fake_dup"]
+
+
+class TestDetectarLayout:
+    def test_texto_qualquer_cai_em_generico(self):
+        from views.cartoes.pdf_parsers import detectar_layout
+        parser = detectar_layout("texto qualquer sem layout específico")
+        assert parser.nome_layout == "generico"
+
+    def test_detectar_em_texto_vazio_cai_em_generico(self):
+        from views.cartoes.pdf_parsers import detectar_layout
+        parser = detectar_layout("")
+        assert parser.nome_layout == "generico"
+
+
+class TestGenericoParser:
+    def test_extrai_linha_data_descricao_valor_br(self):
+        from views.cartoes.pdf_parsers.generico import GenericoParser
+        texto = "01/05  PADARIA DO BAIRRO        45,80\n"
+        itens = GenericoParser().extrair(texto)
+        assert len(itens) == 1
+        assert itens[0]["descricao"] == "PADARIA DO BAIRRO"
+        assert itens[0]["valor"] == 45.80
+
+    def test_extrai_com_simbolo_real(self):
+        from views.cartoes.pdf_parsers.generico import GenericoParser
+        texto = "12/03  AMAZON BR        R$ 199,90"
+        itens = GenericoParser().extrair(texto)
+        assert len(itens) == 1
+        assert itens[0]["valor"] == 199.90
+
+    def test_extrai_valor_com_milhar(self):
+        from views.cartoes.pdf_parsers.generico import GenericoParser
+        texto = "05/04  GELADEIRA INOX     2.499,00"
+        itens = GenericoParser().extrair(texto)
+        assert len(itens) == 1
+        assert itens[0]["valor"] == 2499.00
+
+    def test_ignora_linhas_sem_padrao(self):
+        from views.cartoes.pdf_parsers.generico import GenericoParser
+        itens = GenericoParser().extrair("Texto qualquer sem data nem valor")
+        assert itens == []
+
+    def test_schema_de_saida_completo(self):
+        from views.cartoes.pdf_parsers.generico import GenericoParser
+        itens = GenericoParser().extrair("01/05 LOJA TESTE 100,00")
+        assert len(itens) == 1
+        assert set(itens[0].keys()) == {
+            "descricao", "estabelecimento", "categoria", "parcela", "valor",
+        }
+
+    def test_extrai_multiplas_linhas(self):
+        from views.cartoes.pdf_parsers.generico import GenericoParser
+        texto = (
+            "01/05  PADARIA DO BAIRRO       45,80\n"
+            "02/05  POSTO SHELL            120,00\n"
+            "03/05  NETFLIX                 39,90\n"
+        )
+        itens = GenericoParser().extrair(texto)
+        assert len(itens) == 3
+        valores = sorted(i["valor"] for i in itens)
+        assert valores == [39.90, 45.80, 120.00]
+
+    def test_generico_em_pdf_real_extrai_algo(self):
+        """Sanity: rodar o genérico no PDF do Nubank deve achar pelo menos
+        algumas linhas (mesmo que não seja o parser ideal pra esse layout)."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.generico import GenericoParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        itens = GenericoParser().extrair(texto)
+        # Não exigimos N específico (será refinado em parsers concretos),
+        # mas o genérico não pode retornar 0 num PDF real de fatura.
+        assert len(itens) > 0
