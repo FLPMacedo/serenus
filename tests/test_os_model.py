@@ -451,3 +451,57 @@ class TestFiltrosBuscaOS:
         assert len(listar_os(busca="urgente")) == 1
         assert len(listar_os(busca="URGENTE")) == 1
         assert len(listar_os(busca="Urgente")) == 1
+
+
+# ---------------------------------------------------------------------------
+# Etapa 8 — Impressão PDF
+# ---------------------------------------------------------------------------
+
+class TestImprimirOS:
+    def test_gera_pdf_arquivo_existe(self, banco, tmp_path):
+        from views.os.imprimir_os import imprimir_os_pdf
+        from views.os.os_model import salvar_os, obter_os
+        oid = salvar_os(_dados_os(), [_item("Parafuso", 10.0, 0.50)])
+        os_obj = obter_os(oid)
+        destino = tmp_path / "saida.pdf"
+        imprimir_os_pdf(os_obj, destino)
+        assert destino.exists()
+        assert destino.stat().st_size > 0
+
+    def test_gera_pdf_assinatura_valida(self, banco, tmp_path):
+        """Primeiros bytes do arquivo devem ser %PDF (magic bytes)."""
+        from views.os.imprimir_os import imprimir_os_pdf
+        from views.os.os_model import salvar_os, obter_os
+        oid = salvar_os(_dados_os(), [_item("Cabo HDMI", 2.0, 30.0)])
+        destino = tmp_path / "os.pdf"
+        imprimir_os_pdf(obter_os(oid), destino)
+        with destino.open("rb") as f:
+            cabecalho = f.read(4)
+        assert cabecalho == b"%PDF"
+
+    def test_gera_pdf_sem_itens(self, banco, tmp_path):
+        from views.os.imprimir_os import imprimir_os_pdf
+        from views.os.os_model import salvar_os, obter_os
+        oid = salvar_os(_dados_os(), [])
+        destino = tmp_path / "vazia.pdf"
+        imprimir_os_pdf(obter_os(oid), destino)
+        assert destino.exists()
+
+    def test_gera_pdf_sem_mao_de_obra(self, banco, tmp_path):
+        from views.os.imprimir_os import imprimir_os_pdf
+        from views.os.os_model import salvar_os, obter_os
+        dados = {**_dados_os(), "valor_hora": 0.0, "horas_trabalhadas": 0.0}
+        oid = salvar_os(dados, [_item("X", 1.0, 50.0)])
+        destino = tmp_path / "sem_mo.pdf"
+        imprimir_os_pdf(obter_os(oid), destino)
+        assert destino.exists()
+
+    def test_gera_pdf_caminho_str(self, banco, tmp_path):
+        """imprimir_os_pdf deve aceitar caminho str além de Path."""
+        from views.os.imprimir_os import imprimir_os_pdf
+        from views.os.os_model import salvar_os, obter_os
+        oid = salvar_os(_dados_os(), [])
+        destino = str(tmp_path / "str_path.pdf")
+        imprimir_os_pdf(obter_os(oid), destino)
+        from pathlib import Path as _P
+        assert _P(destino).exists()
