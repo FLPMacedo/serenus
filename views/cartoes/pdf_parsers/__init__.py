@@ -15,12 +15,13 @@ from __future__ import annotations
 
 from views.cartoes.pdf_parsers.base import PDFParser
 from views.cartoes.pdf_parsers.generico import GenericoParser
+from views.cartoes.pdf_parsers.itau import ItauParser
 from views.cartoes.pdf_parsers.nubank import NubankParser
 
 
 # Lista mutável de parsers em ordem de prioridade.
 # Parsers específicos primeiro; o GenericoParser é o último (fallback).
-_PARSERS: list[PDFParser] = [NubankParser(), GenericoParser()]
+_PARSERS: list[PDFParser] = [NubankParser(), ItauParser(), GenericoParser()]
 
 
 def registrar(parser: PDFParser) -> None:

@@ -359,3 +359,110 @@ class TestNubankParser:
         texto = extrair_texto_pdf(str(_PDF_NUBANK))
         parser = detectar_layout(texto)
         assert parser.nome_layout == "nubank"
+
+
+# ---------------------------------------------------------------------------
+# Etapa 4 — Parser Itaú (VISA + MASTERCARD)
+# ---------------------------------------------------------------------------
+
+class TestItauParser:
+    def test_reconhece_visa(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_VISA), senha=_SENHA_ITAU)
+        assert ItauParser().reconhece(texto) is True
+
+    def test_reconhece_mastercard(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_MASTER), senha=_SENHA_ITAU)
+        assert ItauParser().reconhece(texto) is True
+
+    def test_nao_reconhece_nubank(self):
+        """Garante que o parser Itaú não dá falso positivo em PDF Nubank,
+        mesmo com 'ITAU UNIBANCO' aparecendo como estabelecimento."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        assert ItauParser().reconhece(texto) is False
+
+    def test_extrai_itens_visa(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_VISA), senha=_SENHA_ITAU)
+        itens = ItauParser().extrair(texto)
+        # VISA tem 4 lançamentos em "produtos e serviços"
+        assert len(itens) >= 4, f"esperava >=4 itens, achou {len(itens)}"
+
+    def test_extrai_itens_mastercard(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_MASTER), senha=_SENHA_ITAU)
+        itens = ItauParser().extrair(texto)
+        # MASTERCARD tem 5 (compras+saques) + 4 (produtos+serviços) = 9
+        assert len(itens) >= 9, f"esperava >=9 itens, achou {len(itens)}"
+
+    def test_extrai_spotify_mastercard(self):
+        """13/03 DM*SpotifySAO PAULOBRA 12,90"""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_MASTER), senha=_SENHA_ITAU)
+        itens = ItauParser().extrair(texto)
+        sp = [i for i in itens if "spotify" in i["descricao"].lower()]
+        assert len(sp) >= 1
+        assert sp[0]["valor"] == pytest.approx(12.90)
+
+    def test_extrai_parcela_visa(self):
+        """VISA tem parcelas no formato '05/12', '05/11', '03/04', '02/04'."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_VISA), senha=_SENHA_ITAU)
+        itens = ItauParser().extrair(texto)
+        parc = [i for i in itens if i["parcela"]]
+        assert len(parc) >= 4, "VISA deve ter pelo menos 4 parceladas"
+
+    def test_ignora_pagamentos_negativos(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        for pdf in (_PDF_VISA, _PDF_MASTER):
+            texto = extrair_texto_pdf(str(pdf), senha=_SENHA_ITAU)
+            itens = ItauParser().extrair(texto)
+            for i in itens:
+                assert i["valor"] > 0, f"valor não positivo em {pdf.name}: {i}"
+            descs = " | ".join(i["descricao"].lower() for i in itens)
+            assert "pagamento" not in descs
+
+    def test_nao_inclui_proximas_faturas(self):
+        """Linhas em 'Compras parceladas - próximas faturas' devem ser puladas
+        (são projeções, não lançamentos da fatura atual)."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_VISA), senha=_SENHA_ITAU)
+        itens = ItauParser().extrair(texto)
+        # VISA: 4 produtos atuais + 4 próximos = não pode ter 8+
+        # Parser deve trazer só os 4 atuais
+        assert len(itens) <= 6, \
+            f"parser está incluindo próximas faturas (len={len(itens)})"
+
+    def test_schema_completo(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        texto = extrair_texto_pdf(str(_PDF_MASTER), senha=_SENHA_ITAU)
+        itens = ItauParser().extrair(texto)
+        chaves = {"descricao", "estabelecimento", "categoria", "parcela", "valor"}
+        for i in itens:
+            assert set(i.keys()) == chaves
+
+    def test_detectado_pelo_registry_visa(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers import detectar_layout
+        texto = extrair_texto_pdf(str(_PDF_VISA), senha=_SENHA_ITAU)
+        parser = detectar_layout(texto)
+        assert parser.nome_layout == "itau"
+
+    def test_detectado_pelo_registry_mastercard(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers import detectar_layout
+        texto = extrair_texto_pdf(str(_PDF_MASTER), senha=_SENHA_ITAU)
+        parser = detectar_layout(texto)
+        assert parser.nome_layout == "itau"
