@@ -597,9 +597,9 @@ Sidebar → **📋 Plano de Contas**. Personalize as categorias usadas em Contas
 
 🎯 **Objetivo:** Registrar um chamado interno (manutenção, TI, facilities) com solicitante, materiais consumidos e mão de obra — sem afetar o financeiro do app.
 
-> *Os screenshots da tela (`14_ordens_servico.png`) e do modal (`modais/15_nova_os.png`) serão adicionados após próxima execução de `gerar_screenshots.py` com a área de trabalho limpa. Os scripts já estão prontos.*
-
 ### 17.1 Tela
+
+![Ordens de Serviço — listagem](screenshots/14_ordens_servico.png)
 
 Sidebar → **🔧 Ordens de Serviço**.
 
@@ -612,6 +612,8 @@ No topo:
 - Botão **+ Nova OS**
 
 ### 17.2 Cadastrando uma OS
+
+![Modal de nova OS — solicitante, datas, descrição, materiais e mão de obra](screenshots/modais/15_nova_os.png)
 
 Clique em **+ Nova OS**. O modal já mostra o próximo número (ex.: `OS-0002`) no canto superior esquerdo.
 

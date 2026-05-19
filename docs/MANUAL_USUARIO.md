@@ -671,11 +671,14 @@ Para experimentar a **importação de fatura**, use o modo demonstração (perfi
 
 ## 18. Ordens de Serviço (interna) *(módulo novo — v2.1)*
 
+![Ordens de Serviço — listagem com cards, badges de status e totais computados](screenshots/14_ordens_servico.png)
+
 O módulo de **Ordem de Serviço (OS)** controla solicitações internas de manutenção, TI, facilities e qualquer outro tipo de chamado entre setores da empresa. Diferente do módulo de Vendas, **OS não gera lançamento financeiro automático** — os valores (materiais consumidos + mão de obra) ficam registrados apenas na própria OS, para compreensão e rastreabilidade do serviço.
 
-> *Screenshots da tela e do modal de cadastro serão adicionados após próxima execução de `gerar_screenshots.py` com a área de trabalho limpa.*
-
 ### 18.1 Abrindo uma nova OS
+
+![Modal de nova OS com solicitante, datas, descrição, materiais e mão de obra](screenshots/modais/15_nova_os.png)
+
 
 1. Sidebar → **🔧 Ordens de Serviço** → **+ Nova OS**
 2. O número da OS é gerado automaticamente no formato **OS-NNNN** (sequencial, nunca reusa números)
