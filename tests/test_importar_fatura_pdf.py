@@ -275,3 +275,87 @@ class TestGenericoParser:
         # Não exigimos N específico (será refinado em parsers concretos),
         # mas o genérico não pode retornar 0 num PDF real de fatura.
         assert len(itens) > 0
+
+
+# ---------------------------------------------------------------------------
+# Etapa 3 — Parser Nubank
+# ---------------------------------------------------------------------------
+
+class TestNubankParser:
+    def test_reconhece_pdf_nubank_real(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        assert NubankParser().reconhece(texto) is True
+
+    def test_nao_reconhece_texto_aleatorio(self):
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        assert NubankParser().reconhece("texto qualquer sem indicio") is False
+
+    def test_nao_reconhece_fatura_itau(self):
+        """Garante que o parser Nubank não dá falso positivo em PDF Itaú."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        texto = extrair_texto_pdf(str(_PDF_VISA), senha=_SENHA_ITAU)
+        assert NubankParser().reconhece(texto) is False
+
+    def test_extrai_itens_do_pdf_real(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        itens = NubankParser().extrair(texto)
+        # Pelo menos 5 transações positivas (a fatura tem ~26)
+        assert len(itens) >= 5, f"esperava >=5 itens, achou {len(itens)}"
+
+    def test_extrai_netflix(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        itens = NubankParser().extrair(texto)
+        netflix = [i for i in itens if "netflix" in i["descricao"].lower()]
+        assert len(netflix) >= 1
+        assert netflix[0]["valor"] == pytest.approx(44.90)
+
+    def test_captura_parcela_multilinha(self):
+        """Transações parceladas vêm em multi-linha: data → descrição
+        com 'Parcela N/M' → linha de detalhes → valor isolado."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        itens = NubankParser().extrair(texto)
+        parceladas = [i for i in itens if i.get("parcela", "")]
+        assert len(parceladas) >= 1, "nenhuma transação parcelada capturada"
+        # Pelo menos uma das parcelas deve ter formato N/M
+        formatos = [i["parcela"] for i in parceladas]
+        import re
+        assert any(re.match(r"^\d+/\d+$", p) for p in formatos), \
+            f"nenhum no formato N/M: {formatos}"
+
+    def test_ignora_pagamentos_negativos(self):
+        """Linhas '−R$ X' (U+2212) são pagamentos/créditos — pular."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        itens = NubankParser().extrair(texto)
+        for i in itens:
+            assert i["valor"] > 0, f"valor não positivo: {i}"
+        descs = " | ".join(i["descricao"].lower() for i in itens)
+        assert "pagamento em" not in descs
+
+    def test_schema_completo_em_todos_itens(self):
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers.nubank import NubankParser
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        itens = NubankParser().extrair(texto)
+        chaves = {"descricao", "estabelecimento", "categoria", "parcela", "valor"}
+        for i in itens:
+            assert set(i.keys()) == chaves
+
+    def test_detectado_pelo_registry(self):
+        """Após o parser ser registrado, detectar_layout deve devolvê-lo
+        pra um PDF Nubank (não cair no genérico)."""
+        from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
+        from views.cartoes.pdf_parsers import detectar_layout
+        texto = extrair_texto_pdf(str(_PDF_NUBANK))
+        parser = detectar_layout(texto)
+        assert parser.nome_layout == "nubank"
