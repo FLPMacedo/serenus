@@ -263,10 +263,53 @@ def inicializar_banco():
         );
     """)
 
+    cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS ordens_servico (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero             TEXT    NOT NULL UNIQUE,
+            solicitante_nome   TEXT    NOT NULL DEFAULT '',
+            solicitante_setor  TEXT    DEFAULT '',
+            solicitante_ramal  TEXT    DEFAULT '',
+            data_solicitacao   TEXT    NOT NULL,
+            hora_solicitacao   TEXT    DEFAULT '',
+            data_execucao      TEXT,
+            hora_execucao      TEXT    DEFAULT '',
+            descricao_servico  TEXT    DEFAULT '',
+            observacoes        TEXT    DEFAULT '',
+            responsavel        TEXT    DEFAULT '',
+            status             TEXT    CHECK(status IN ('aberta','em_andamento','aguardando_peca','concluida','cancelada')) DEFAULT 'aberta',
+            valor_hora         REAL    NOT NULL DEFAULT 0.0,
+            horas_trabalhadas  REAL    NOT NULL DEFAULT 0.0,
+            criado_em          TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS itens_os (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            os_id       INTEGER NOT NULL REFERENCES ordens_servico(id),
+            produto_id  INTEGER REFERENCES produtos(id),
+            descricao   TEXT    NOT NULL,
+            quantidade  REAL    NOT NULL DEFAULT 1.0,
+            preco_unit  REAL    NOT NULL,
+            subtotal    REAL    NOT NULL,
+            observacao  TEXT    DEFAULT '',
+            criado_em   TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS os_historico (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            os_id           INTEGER NOT NULL REFERENCES ordens_servico(id),
+            campo           TEXT    NOT NULL,
+            valor_anterior  TEXT,
+            valor_novo      TEXT,
+            alterado_em     TEXT    NOT NULL
+        );
+    """)
+
     conn.commit()
     _migrar_plano_contas(conn)
     _migrar_fontes_receita(conn)
     _migrar_tabelas_vendas(conn)
+    _migrar_tabelas_os(conn)
     _migrar_compras_cartao(conn)
     _popular_contas_padrao(conn)
     _popular_fontes_padrao(conn)
@@ -373,6 +416,62 @@ def _migrar_tabelas_vendas(conn: sqlite3.Connection):
                 total_parcelas   INTEGER DEFAULT 1,
                 observacao       TEXT    DEFAULT '',
                 criado_em        TEXT    NOT NULL
+            )
+        """)
+    conn.commit()
+
+
+def _migrar_tabelas_os(conn: sqlite3.Connection):
+    """Garante que as tabelas do módulo de Ordem de Serviço existam em bancos pré-existentes."""
+    tabelas_existentes = {
+        row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    if "ordens_servico" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS ordens_servico (
+                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                numero             TEXT    NOT NULL UNIQUE,
+                solicitante_nome   TEXT    NOT NULL DEFAULT '',
+                solicitante_setor  TEXT    DEFAULT '',
+                solicitante_ramal  TEXT    DEFAULT '',
+                data_solicitacao   TEXT    NOT NULL,
+                hora_solicitacao   TEXT    DEFAULT '',
+                data_execucao      TEXT,
+                hora_execucao      TEXT    DEFAULT '',
+                descricao_servico  TEXT    DEFAULT '',
+                observacoes        TEXT    DEFAULT '',
+                responsavel        TEXT    DEFAULT '',
+                status             TEXT    CHECK(status IN ('aberta','em_andamento','aguardando_peca','concluida','cancelada')) DEFAULT 'aberta',
+                valor_hora         REAL    NOT NULL DEFAULT 0.0,
+                horas_trabalhadas  REAL    NOT NULL DEFAULT 0.0,
+                criado_em          TEXT    NOT NULL
+            )
+        """)
+    if "itens_os" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS itens_os (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                os_id       INTEGER NOT NULL REFERENCES ordens_servico(id),
+                produto_id  INTEGER REFERENCES produtos(id),
+                descricao   TEXT    NOT NULL,
+                quantidade  REAL    NOT NULL DEFAULT 1.0,
+                preco_unit  REAL    NOT NULL,
+                subtotal    REAL    NOT NULL,
+                observacao  TEXT    DEFAULT '',
+                criado_em   TEXT    NOT NULL
+            )
+        """)
+    if "os_historico" not in tabelas_existentes:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS os_historico (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                os_id           INTEGER NOT NULL REFERENCES ordens_servico(id),
+                campo           TEXT    NOT NULL,
+                valor_anterior  TEXT,
+                valor_novo      TEXT,
+                alterado_em     TEXT    NOT NULL
             )
         """)
     conn.commit()
@@ -644,6 +743,9 @@ def zerar_dados():
             DELETE FROM contas_a_receber;
             DELETE FROM itens_venda;
             DELETE FROM vendas;
+            DELETE FROM os_historico;
+            DELETE FROM itens_os;
+            DELETE FROM ordens_servico;
             DELETE FROM produtos;
         """)
         conn.execute("""
