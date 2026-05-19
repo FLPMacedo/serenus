@@ -55,10 +55,12 @@ class CartoesView(ctk.CTkFrame):
 
         from views.widgets.ajuda import Tooltip
         btn_importar = ctk.CTkButton(
-            header, text="⬆ Importar Fatura", height=32,
+            header, text="⬆ Importar Fatura ▾", height=32,
             fg_color="transparent", border_width=1,
             border_color=cores["primario"], text_color=cores["primario"],
-            command=self._importar_fatura_global,
+        )
+        btn_importar.configure(
+            command=lambda b=btn_importar: self._abrir_menu_import(None, b)
         )
         btn_importar.grid(row=0, column=2, padx=8, sticky="e")
         Tooltip(btn_importar,
@@ -195,10 +197,12 @@ class CartoesView(ctk.CTkFrame):
                       command=lambda c=cartao: self._lancar_compra(c)
                       ).pack(side="left", padx=2)
 
-        ctk.CTkButton(btns, text="⬆ Importar", height=28, width=90,
-                      font=ctk.CTkFont(size=11),
-                      command=lambda c=cartao: self._importar_fatura(c)
-                      ).pack(side="left", padx=2)
+        btn_imp = ctk.CTkButton(btns, text="⬆ Importar ▾", height=28, width=100,
+                                 font=ctk.CTkFont(size=11))
+        btn_imp.configure(
+            command=lambda c=cartao, b=btn_imp: self._abrir_menu_import(c, b)
+        )
+        btn_imp.pack(side="left", padx=2)
 
         ctk.CTkButton(btns, text="Ver faturas", height=28, width=90,
                       font=ctk.CTkFont(size=11),
@@ -242,17 +246,38 @@ class CartoesView(ctk.CTkFrame):
                    on_salvo=lambda msg: (self._carregar(),
                                          self._toast(msg)))
 
-    def _importar_fatura(self, cartao: Cartao):
-        from views.cartoes.importar_fatura_modal import ImportarFaturaModal
-        ImportarFaturaModal(self, cartao=cartao,
-                            on_importado=lambda msg: (self._carregar(),
-                                                      self._toast(msg)))
+    def _abrir_menu_import(self, cartao, widget):
+        """Mostra menu popup com opções Excel/CSV e PDF logo abaixo do botão."""
+        from tkinter import Menu
+        menu = Menu(self, tearoff=0)
+        menu.add_command(
+            label="📊  Excel / CSV (XLSX)",
+            command=lambda c=cartao: self._importar_excel(c),
+        )
+        menu.add_command(
+            label="📄  PDF da fatura",
+            command=lambda c=cartao: self._importar_pdf(c),
+        )
+        try:
+            x = widget.winfo_rootx()
+            y = widget.winfo_rooty() + widget.winfo_height()
+            menu.tk_popup(x, y)
+        finally:
+            menu.grab_release()
 
-    def _importar_fatura_global(self):
+    def _importar_excel(self, cartao):
         from views.cartoes.importar_fatura_modal import ImportarFaturaModal
-        ImportarFaturaModal(self, cartao=None,
-                            on_importado=lambda msg: (self._carregar(),
-                                                      self._toast(msg)))
+        ImportarFaturaModal(
+            self, cartao=cartao,
+            on_importado=lambda msg: (self._carregar(), self._toast(msg)),
+        )
+
+    def _importar_pdf(self, cartao):
+        from views.cartoes.importar_fatura_pdf_modal import ImportarFaturaPDFModal
+        ImportarFaturaPDFModal(
+            self, cartao=cartao,
+            on_importado=lambda msg: (self._carregar(), self._toast(msg)),
+        )
 
     def _ver_faturas(self, cartao: Cartao):
         from views.cartoes.faturas_view import FaturasView
