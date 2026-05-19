@@ -14,13 +14,19 @@ from views.cartoes.cartao_model import Cartao
 
 
 class ImportarFaturaModal(ctk.CTkToplevel):
-    def __init__(self, parent, cartao: Cartao | None = None, on_importado=None):
+    def __init__(self, parent, cartao: Cartao | None = None, on_importado=None,
+                 arquivo_inicial: str | None = None):
+        """
+        arquivo_inicial: se passado, pula o filedialog e carrega esse XLSX/CSV
+        diretamente. Usado pelo modal de PDF para entregar o XLSX intermediário
+        no mesmo fluxo de import existente.
+        """
         super().__init__(parent)
         self._cartao       = cartao
         self._on_importado = on_importado
         self._cores        = get_tema(obter_configuracao("tema", "claro"))
         self._linhas: list = []
-        self._arquivo      = ""
+        self._arquivo      = arquivo_inicial or ""
         self._cartoes_map: dict[str, int] = {}  # "Nome" → id
 
         titulo = f"Serenus — Importar Fatura · {cartao.nome}" if cartao else "Serenus — Importar Fatura de Cartão"
@@ -30,6 +36,11 @@ class ImportarFaturaModal(ctk.CTkToplevel):
         self.grab_set()
 
         self._build()
+
+        # Se veio arquivo inicial (vindo do fluxo PDF), carrega já
+        if arquivo_inicial:
+            self._lbl_arquivo.configure(text=Path(arquivo_inicial).name)
+            self._processar_arquivo()
 
     # ------------------------------------------------------------------
     # Build
