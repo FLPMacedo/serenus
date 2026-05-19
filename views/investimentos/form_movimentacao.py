@@ -281,7 +281,7 @@ class FormMovimentacaoModal(ctk.CTkToplevel):
             self._toast_erro("Data inválida.")
             return
 
-        # Qtd / preço
+        # Qtd / preço — devem ser positivos para movimentações que mexem na posição
         qtd, preco = 0.0, 0.0
         if tipo in _TIPOS_COM_QTD:
             try:
@@ -289,6 +289,12 @@ class FormMovimentacaoModal(ctk.CTkToplevel):
                 preco = float(self._e_preco.get().replace(",", ".") or 0)
             except ValueError:
                 self._toast_erro("Quantidade ou preço inválido.")
+                return
+            if qtd <= 0:
+                self._toast_erro("Quantidade deve ser maior que zero.")
+                return
+            if preco < 0:
+                self._toast_erro("Preço unitário não pode ser negativo.")
                 return
 
         # Bruto / taxas / líquido

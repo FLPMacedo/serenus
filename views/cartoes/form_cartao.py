@@ -332,11 +332,30 @@ class FormCartao(ctk.CTkToplevel):
         limite_str = self._entry_limite.get().replace(".", "").replace(",", ".").strip()
         try:
             limite = float(limite_str) if limite_str else 0.0
+            if limite < 0:
+                self._err_nome.configure(text="Limite não pode ser negativo.")
+                return
         except ValueError:
-            limite = 0.0
+            self._err_nome.configure(text="Limite inválido. Digite só números.")
+            return
 
         venc_str = self._entry_vencimento.get().strip()
         fech_str = self._entry_fechamento.get().strip()
+
+        # Valida dias 1..31 (rejeita 99, 0 etc. antes de persistir lixo)
+        def _dia_valido(s: str) -> int | None:
+            if not s:
+                return None
+            if not s.isdigit():
+                return False  # marcador de inválido
+            n = int(s)
+            return n if 1 <= n <= 31 else False
+
+        dia_venc = _dia_valido(venc_str)
+        dia_fech = _dia_valido(fech_str)
+        if dia_venc is False or dia_fech is False:
+            self._err_nome.configure(text="Dia de vencimento/fechamento deve estar entre 1 e 31.")
+            return
 
         dados = {
             "nome":           nome,
@@ -346,8 +365,8 @@ class FormCartao(ctk.CTkToplevel):
             "cor_fundo":      self._entry_cor_fundo.get().strip() or "#6D28D9",
             "cor_texto":      self._entry_cor_texto.get().strip() or "#FFFFFF",
             "limite":         limite,
-            "dia_vencimento": int(venc_str) if venc_str.isdigit() else None,
-            "dia_fechamento": int(fech_str) if fech_str.isdigit() else None,
+            "dia_vencimento": dia_venc,
+            "dia_fechamento": dia_fech,
         }
 
         salvar_cartao(dados, id=self._cartao.id if self._cartao else None)
