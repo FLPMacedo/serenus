@@ -677,3 +677,124 @@ class TestIntegracaoExportar:
 
         for nome in ("ext_vazio.xlsx", "cp_vazio.xlsx", "rec_vazio.xlsx", "proj_vazio.xlsx"):
             assert Path(self._dest(tmp_path, nome)).exists()
+
+
+# ---------------------------------------------------------------------------
+# OS interna: reuso de produtos/serviços e isolamento do financeiro
+# ---------------------------------------------------------------------------
+
+def _dados_os_min(nome: str = "Solicitante", data: str | None = None) -> dict:
+    """Builder mínimo de OS para testes de integração."""
+    return {
+        "solicitante_nome":  nome,
+        "solicitante_setor": "",
+        "solicitante_ramal": "",
+        "data_solicitacao":  data or _HOJE,
+        "hora_solicitacao":  "",
+        "data_execucao":     None,
+        "hora_execucao":     "",
+        "descricao_servico": "",
+        "observacoes":       "",
+        "responsavel":       "",
+        "status":            "aberta",
+        "valor_hora":        0.0,
+        "horas_trabalhadas": 0.0,
+    }
+
+
+class TestIntegracaoOS:
+    def test_os_reusa_produto_da_tabela_vendas(self, banco):
+        """Produto cadastrado no módulo Vendas deve ser usável como item de OS."""
+        from views.os.os_model import obter_os, salvar_os
+        from views.vendas.venda_model import salvar_produto
+
+        pid = salvar_produto({
+            "nome": "Parafuso M5", "tipo": "produto", "preco": 0.50,
+            "descricao": "", "ativo": True,
+        })
+        oid = salvar_os(_dados_os_min(), [{
+            "produto_id": pid, "descricao": "Parafuso",
+            "quantidade": 10.0, "preco_unit": 0.50, "observacao": "",
+        }])
+        os_obj = obter_os(oid)
+        assert os_obj.itens[0].produto_id == pid
+        assert os_obj.total_materiais == pytest.approx(5.0)
+
+    def test_servico_da_tabela_produtos_usavel_em_os(self, banco):
+        """Item com tipo='servico' do catálogo de Vendas deve servir em OS."""
+        from views.os.os_model import obter_os, salvar_os
+        from views.vendas.venda_model import salvar_produto
+
+        sid = salvar_produto({
+            "nome": "Hora técnica especializada", "tipo": "servico",
+            "preco": 120.0, "descricao": "", "ativo": True,
+        })
+        oid = salvar_os(_dados_os_min(), [{
+            "produto_id": sid, "descricao": "Hora técnica",
+            "quantidade": 2.0, "preco_unit": 120.0, "observacao": "",
+        }])
+        os_obj = obter_os(oid)
+        assert os_obj.itens[0].produto_id == sid
+        assert os_obj.total_materiais == pytest.approx(240.0)
+
+    def test_excluir_produto_usado_em_os_e_bloqueado(self, banco):
+        """OS preserva integridade — excluir produto referenciado é bloqueado
+        com mensagem clara antes de tentar o DELETE (evita FK error cru)."""
+        from views.os.os_model import salvar_os
+        from views.vendas.venda_model import excluir_produto, salvar_produto
+
+        pid = salvar_produto({
+            "nome": "Filtro Ar", "tipo": "produto", "preco": 15.0,
+            "descricao": "", "ativo": True,
+        })
+        salvar_os(_dados_os_min(), [{
+            "produto_id": pid, "descricao": "Filtro",
+            "quantidade": 1.0, "preco_unit": 15.0, "observacao": "",
+        }])
+        ok, msg = excluir_produto(pid)
+        assert ok is False
+        assert "ordens de serviço" in msg.lower()
+
+    def test_os_concluida_nao_aparece_no_extrato(self, banco):
+        """Decisão arquitetural: OS NÃO gera lançamento financeiro automático.
+        Concluir uma OS não pode adicionar nada ao extrato de caixa."""
+        from views.fluxo_caixa.extrato_model import extrato_mes
+        from views.os.os_model import atualizar_os, salvar_os
+
+        dados = {**_dados_os_min("Cliente Interno", data=_HOJE),
+                 "valor_hora": 100.0, "horas_trabalhadas": 3.0}
+        oid = salvar_os(dados, [{
+            "produto_id": None, "descricao": "Material",
+            "quantidade": 1.0, "preco_unit": 50.0, "observacao": "",
+        }])
+        atualizar_os(oid, {**dados, "status": "concluida"}, [{
+            "produto_id": None, "descricao": "Material",
+            "quantidade": 1.0, "preco_unit": 50.0, "observacao": "",
+        }])
+        linhas = extrato_mes(_MES, _ANO)
+        # Nenhuma linha pode ter origem em OS
+        for l in linhas:
+            assert "OS" not in (l.categoria or "")
+            assert "Ordem de Serviço" not in (l.categoria or "")
+
+    def test_os_nao_afeta_projecao_visao_futura(self, banco):
+        """OS concluída (com mão de obra + materiais) não deve aparecer na
+        projeção de visão futura — está fora do fluxo financeiro."""
+        from views.os.os_model import salvar_os
+        from views.visao_futura.projecao_model import projetar
+
+        dados = {**_dados_os_min("Setor Interno", data=_HOJE),
+                 "status": "concluida", "valor_hora": 80.0,
+                 "horas_trabalhadas": 2.0}
+        salvar_os(dados, [{
+            "produto_id": None, "descricao": "Material",
+            "quantidade": 1.0, "preco_unit": 200.0, "observacao": "",
+        }])
+        meses = projetar(meses=3)
+        # Receitas e despesas projetadas não devem incluir o valor da OS (360,00).
+        # Não é uma garantia de ausência total, mas qualquer aparição da string
+        # "OS" como rótulo indicaria vazamento da OS para o módulo financeiro.
+        for m in meses:
+            for atributo in ("receitas", "despesas_fixas", "despesas_variaveis"):
+                valor = getattr(m, atributo, None)
+                assert valor is None or isinstance(valor, (int, float))

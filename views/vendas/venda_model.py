@@ -178,11 +178,18 @@ def salvar_produto(dados: dict, id: int | None = None) -> int:
 
 def excluir_produto(id: int) -> tuple[bool, str]:
     with conectar() as conn:
-        usado = conn.execute(
+        usado_vendas = conn.execute(
             "SELECT COUNT(*) FROM itens_venda WHERE produto_id=?", (id,)
         ).fetchone()[0]
-        if usado > 0:
+        if usado_vendas > 0:
             return False, "Produto possui vendas registradas e não pode ser excluído."
+        # OS interna pode referenciar produtos via itens_os (FK opcional).
+        # Verifica ANTES de tentar deletar para evitar erro de FK sem mensagem clara.
+        usado_os = conn.execute(
+            "SELECT COUNT(*) FROM itens_os WHERE produto_id=?", (id,)
+        ).fetchone()[0]
+        if usado_os > 0:
+            return False, "Produto possui ordens de serviço registradas e não pode ser excluído."
         conn.execute("DELETE FROM produtos WHERE id=?", (id,))
     return True, ""
 
