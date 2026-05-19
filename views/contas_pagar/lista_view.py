@@ -315,7 +315,10 @@ class ContasPagarView(ctk.CTkFrame):
 
     def _excluir(self, id: int, dlg):
         dlg.destroy()
-        excluir_conta(id)
+        ok, msg = excluir_conta(id)
+        if not ok:
+            self._toast(msg, "erro")
+            return
         self._carregar()
         self._toast("Despesa excluída.")
 

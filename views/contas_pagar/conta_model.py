@@ -266,9 +266,26 @@ def marcar_pago(id: int):
         )
 
 
-def excluir_conta(id: int):
+def excluir_conta(id: int) -> tuple[bool, str]:
+    """Exclui uma despesa por id.
+
+    Retorna (sucesso, mensagem_erro). Bloqueia a exclusão se a conta foi
+    gerada por uma movimentação de investimento (FK em
+    movimentacoes_investimento.contas_pagar_id) — evita FOREIGN KEY error
+    cru e orienta o usuário sobre onde excluir.
+    """
     with conectar() as conn:
+        usado_invest = conn.execute(
+            "SELECT COUNT(*) FROM movimentacoes_investimento"
+            " WHERE contas_pagar_id=?", (id,),
+        ).fetchone()[0]
+        if usado_invest > 0:
+            return False, (
+                "Esta despesa foi gerada por uma movimentação de investimento. "
+                "Exclua a movimentação no módulo Investimentos."
+            )
         conn.execute("DELETE FROM contas_pagar WHERE id=?", (id,))
+    return True, ""
 
 
 def buscar_contas_pagar(texto: str,

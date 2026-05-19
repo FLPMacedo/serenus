@@ -702,6 +702,73 @@ def _dados_os_min(nome: str = "Solicitante", data: str | None = None) -> dict:
     }
 
 
+class TestExclusaoContaPagarOrfaInvestimento:
+    """Excluir conta_pagar gerada por movimentacao de investimento deve
+    bloquear com mensagem clara (nao FOREIGN KEY constraint failed cru)."""
+
+    def test_excluir_contas_pagar_referenciada_por_movimentacao(self, banco):
+        from database import conectar
+        from views.contas_pagar.conta_model import excluir_conta
+        from views.investimentos.investimento_model import (
+            salvar_ativo, salvar_conta_investimento, salvar_movimentacao,
+        )
+
+        ci_id = salvar_conta_investimento({
+            "nome": "Corretora X", "instituicao": "Banco X",
+            "tipo": "corretora", "observacao": "",
+        })
+        at_id = salvar_ativo({
+            "codigo": "TEST3", "nome": "Acao Teste",
+            "tipo": "acao", "conta_investimento_id": ci_id,
+            "observacao": "",
+        })
+        salvar_movimentacao({
+            "ativo_id": at_id, "conta_investimento_id": ci_id,
+            "tipo": "compra", "data": _HOJE,
+            "quantidade": 100, "preco_unitario": 10.0,
+            "valor_bruto": 1000.0, "taxas": 0.0, "valor_liquido": 1000.0,
+            "observacao": "", "registrar_no_financeiro": True,
+        })
+
+        # A movimentacao gerou uma linha em contas_pagar
+        with conectar() as conn:
+            cp_id = conn.execute(
+                "SELECT id FROM contas_pagar ORDER BY id DESC LIMIT 1"
+            ).fetchone()[0]
+
+        # Excluir essa conta_pagar deve falhar de forma controlada,
+        # nao lancar IntegrityError cru
+        ok, msg = excluir_conta(cp_id)
+        assert ok is False, "excluir_conta deveria recusar a delecao"
+        assert msg, "deveria retornar mensagem explicativa"
+        assert "investimento" in msg.lower() or "movimenta" in msg.lower()
+
+    def test_excluir_contas_pagar_normal_continua_funcionando(self, banco):
+        """Exclusao de conta_pagar sem referencias deve continuar OK."""
+        from database import conectar
+        from views.contas_pagar.conta_model import excluir_conta
+        from datetime import datetime
+
+        with conectar() as conn:
+            cur = conn.execute(
+                "INSERT INTO contas_pagar (descricao, valor, data_vencimento,"
+                " status, recorrente, criado_em)"
+                " VALUES ('Conta avulsa', 100.0, ?, 'pendente', 0, ?)",
+                (_HOJE, datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            )
+            cp_id = cur.lastrowid
+
+        ok, msg = excluir_conta(cp_id)
+        assert ok is True
+        assert msg == ""
+
+        with conectar() as conn:
+            remaining = conn.execute(
+                "SELECT COUNT(*) FROM contas_pagar WHERE id=?", (cp_id,)
+            ).fetchone()[0]
+        assert remaining == 0
+
+
 class TestIntegracaoOS:
     def test_os_reusa_produto_da_tabela_vendas(self, banco):
         """Produto cadastrado no módulo Vendas deve ser usável como item de OS."""
