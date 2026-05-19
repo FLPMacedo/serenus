@@ -153,6 +153,61 @@ def extrair_texto_pdf(caminho: str, senha: Optional[str] = None) -> str:
 # Pipeline completo
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# OCR fallback (graceful degradation)
+# ---------------------------------------------------------------------------
+
+# Limite abaixo do qual consideramos que o pypdf não conseguiu extrair texto
+# útil — provavelmente PDF puramente imagem (escaneado).
+_LIMITE_TEXTO_VAZIO = 50
+
+
+def ocr_disponivel() -> bool:
+    """True se as bibliotecas pytesseract + pdf2image estiverem instaladas
+    e Tesseract for executável. Usado para escolher entre tentar OCR ou
+    devolver mensagem clara ao usuário."""
+    try:
+        import pytesseract  # noqa: F401
+        import pdf2image    # noqa: F401
+    except ImportError:
+        return False
+    try:
+        import pytesseract
+        pytesseract.get_tesseract_version()
+        return True
+    except Exception:
+        return False
+
+
+def _extrair_texto_via_ocr(caminho: str, senha: Optional[str] = None) -> str:
+    """Faz OCR de cada página do PDF e retorna texto concatenado.
+
+    Pré-condição: ocr_disponivel() == True. Senha (se houver) é usada pra
+    descriptografar antes de converter páginas em imagem.
+    """
+    import pdf2image
+    import pytesseract
+
+    log.info("OCR: convertendo páginas em imagem para %s", caminho)
+    kwargs = {}
+    if senha:
+        kwargs["userpw"] = senha
+    imagens = pdf2image.convert_from_path(caminho, **kwargs)
+    partes = []
+    for i, img in enumerate(imagens, start=1):
+        try:
+            partes.append(pytesseract.image_to_string(img, lang="por"))
+        except pytesseract.TesseractError:
+            # Sem dados do português instalados, fallback pra inglês
+            partes.append(pytesseract.image_to_string(img))
+        log.info("OCR página %d: %d chars", i, len(partes[-1]))
+    return "\n".join(partes).strip()
+
+
+# ---------------------------------------------------------------------------
+# Pipeline completo (com fallback OCR)
+# ---------------------------------------------------------------------------
+
 def pdf_para_linhas(
     caminho: str,
     senha: Optional[str] = None,
@@ -167,18 +222,40 @@ def pdf_para_linhas(
             tinha_senha bool  (se o PDF original era protegido)
             n_itens     int   (len(linhas))
             total       float (soma dos valores)
-            ocr_usado   bool  (False até Etapa 8)
+            ocr_usado   bool  (True se foi necessário OCR pra extrair texto)
 
-    Levanta as mesmas exceções de extrair_texto_pdf (PDFSenhaIncorretaError,
-    PDFCorrompidoError, FileNotFoundError) e pode levantar PDFLayoutDesconhecidoError
-    em casos raros (registry vazio).
+    Levanta:
+        PDFSenhaIncorretaError       — senha ausente/errada
+        PDFCorrompidoError           — arquivo inválido
+        PDFLayoutDesconhecidoError   — registry vazio (raro)
+        PDFCamposIncompletosError    — texto vazio + OCR indisponível
     """
     tinha_senha = pdf_tem_senha(caminho)
     texto = extrair_texto_pdf(caminho, senha=senha)
+    ocr_usado = False
+
+    # PDF puramente imagem (escaneado) — texto extraído fica vazio ou minúsculo
+    if len(texto) < _LIMITE_TEXTO_VAZIO:
+        log.info("Texto extraído curto (%d chars) — tentando OCR", len(texto))
+        if not ocr_disponivel():
+            raise PDFCamposIncompletosError(
+                "Este PDF parece ser escaneado (imagem) e não tem texto extraível. "
+                "Para importar, instale o Tesseract OCR e as bibliotecas Python "
+                "pytesseract e pdf2image."
+            )
+        try:
+            texto = _extrair_texto_via_ocr(caminho, senha=senha)
+            ocr_usado = True
+        except Exception as e:
+            log.exception("Falha no OCR")
+            raise PDFCamposIncompletosError(
+                f"Falha ao extrair texto via OCR: {e}"
+            ) from e
 
     from views.cartoes.pdf_parsers import detectar_layout
     parser = detectar_layout(texto)
-    log.info("pdf_para_linhas: layout detectado = %s", parser.nome_layout)
+    log.info("pdf_para_linhas: layout detectado = %s (ocr=%s)",
+             parser.nome_layout, ocr_usado)
 
     linhas = parser.extrair(texto)
     total = round(sum(item.get("valor", 0.0) for item in linhas), 2)
@@ -188,7 +265,7 @@ def pdf_para_linhas(
         "tinha_senha": tinha_senha,
         "n_itens":     len(linhas),
         "total":       total,
-        "ocr_usado":   False,  # ativado em etapa futura (OCR fallback)
+        "ocr_usado":   ocr_usado,
     }
     log.info("pdf_para_linhas: %d itens, total R$ %.2f", len(linhas), total)
     return linhas, metadata

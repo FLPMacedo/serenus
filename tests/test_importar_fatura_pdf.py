@@ -469,6 +469,38 @@ class TestItauParser:
 
 
 # ---------------------------------------------------------------------------
+# Etapa 8 — OCR fallback (graceful degradation)
+# ---------------------------------------------------------------------------
+
+class TestOcrFallback:
+    def test_ocr_disponivel_retorna_bool(self):
+        """Função utilitária reporta se as libs de OCR estão instaladas."""
+        from views.cartoes.importar_fatura_pdf_model import ocr_disponivel
+        assert isinstance(ocr_disponivel(), bool)
+
+    def test_pdf_escaneado_sem_ocr_levanta_mensagem_clara(self, tmp_path, monkeypatch):
+        """Simula PDF escaneado (texto vazio) com OCR indisponível —
+        deve levantar erro claro ('escaneado' / 'OCR' / 'Tesseract' na msg)."""
+        import views.cartoes.importar_fatura_pdf_model as mod
+        from views.cartoes.importar_fatura_pdf_model import (
+            PDFCamposIncompletosError, pdf_para_linhas,
+        )
+
+        # Mock: simula texto vazio (como se fosse um PDF puramente imagem)
+        monkeypatch.setattr(mod, "extrair_texto_pdf",
+                            lambda caminho, senha=None: "")
+        # Força OCR indisponível
+        monkeypatch.setattr(mod, "ocr_disponivel", lambda: False)
+        # Mock pdf_tem_senha pra não tentar abrir um arquivo real
+        monkeypatch.setattr(mod, "pdf_tem_senha", lambda caminho: False)
+
+        with pytest.raises(PDFCamposIncompletosError) as excinfo:
+            pdf_para_linhas("fake.pdf")
+        msg = str(excinfo.value).lower()
+        assert ("ocr" in msg) or ("escane" in msg) or ("tesseract" in msg)
+
+
+# ---------------------------------------------------------------------------
 # Etapa 5 — Pipeline pdf_para_linhas + salvar_como_xlsx + equivalência
 # ---------------------------------------------------------------------------
 
@@ -547,6 +579,17 @@ class TestSalvarComoXlsx:
         for i in linhas_excel:
             assert {"descricao", "estabelecimento", "categoria",
                     "parcela", "valor"} <= set(i.keys())
+
+    def test_pdfs_normais_nao_usam_ocr(self):
+        """PDFs com texto extraível NÃO devem disparar OCR (otimização)."""
+        from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
+        for pdf, senha in [
+            (_PDF_NUBANK,  None),
+            (_PDF_VISA,    _SENHA_ITAU),
+            (_PDF_MASTER,  _SENHA_ITAU),
+        ]:
+            _, meta = pdf_para_linhas(str(pdf), senha=senha)
+            assert meta["ocr_usado"] is False, f"OCR rodou desnecessariamente em {pdf.name}"
 
     def test_xlsx_passa_na_validacao_da_pipeline_excel(self, tmp_path):
         """Saída do PDF, lida via Excel, passa pela validar_linhas_fatura
