@@ -147,3 +147,78 @@ def extrair_texto_pdf(caminho: str, senha: Optional[str] = None) -> str:
     else:
         log.info("extrair_texto_pdf(%s): %d caracteres", p.name, len(texto))
     return texto
+
+
+# ---------------------------------------------------------------------------
+# Pipeline completo
+# ---------------------------------------------------------------------------
+
+def pdf_para_linhas(
+    caminho: str,
+    senha: Optional[str] = None,
+) -> tuple[list[dict], dict]:
+    """Pipeline completo: PDF -> texto -> parser concreto -> lista de itens.
+
+    Retorna (linhas, metadata) onde:
+        linhas: list[dict] no schema {descricao, estabelecimento, categoria,
+                                       parcela, valor} — mesmo da pipeline Excel.
+        metadata: dict com chaves:
+            layout      str   ('nubank', 'itau', 'generico', ...)
+            tinha_senha bool  (se o PDF original era protegido)
+            n_itens     int   (len(linhas))
+            total       float (soma dos valores)
+            ocr_usado   bool  (False até Etapa 8)
+
+    Levanta as mesmas exceções de extrair_texto_pdf (PDFSenhaIncorretaError,
+    PDFCorrompidoError, FileNotFoundError) e pode levantar PDFLayoutDesconhecidoError
+    em casos raros (registry vazio).
+    """
+    tinha_senha = pdf_tem_senha(caminho)
+    texto = extrair_texto_pdf(caminho, senha=senha)
+
+    from views.cartoes.pdf_parsers import detectar_layout
+    parser = detectar_layout(texto)
+    log.info("pdf_para_linhas: layout detectado = %s", parser.nome_layout)
+
+    linhas = parser.extrair(texto)
+    total = round(sum(item.get("valor", 0.0) for item in linhas), 2)
+
+    metadata = {
+        "layout":      parser.nome_layout,
+        "tinha_senha": tinha_senha,
+        "n_itens":     len(linhas),
+        "total":       total,
+        "ocr_usado":   False,  # ativado em etapa futura (OCR fallback)
+    }
+    log.info("pdf_para_linhas: %d itens, total R$ %.2f", len(linhas), total)
+    return linhas, metadata
+
+
+def salvar_como_xlsx(linhas: list[dict], destino: str) -> None:
+    """Salva a lista de itens como XLSX no formato compatível com a
+    pipeline Excel (mesmas colunas que gerar_template_importacao_xlsx).
+
+    O arquivo gerado pode ser lido de volta por
+    importar_fatura_model.ler_arquivo_fatura sem nenhum ajuste.
+    """
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Fatura"
+
+    cabecalhos = ["descricao", "estabelecimento", "categoria", "parcela", "valor"]
+    for col, nome in enumerate(cabecalhos, start=1):
+        ws.cell(row=1, column=col, value=nome)
+
+    for linha_idx, item in enumerate(linhas, start=2):
+        ws.cell(row=linha_idx, column=1, value=item.get("descricao", ""))
+        ws.cell(row=linha_idx, column=2, value=item.get("estabelecimento", ""))
+        ws.cell(row=linha_idx, column=3, value=item.get("categoria", ""))
+        ws.cell(row=linha_idx, column=4, value=item.get("parcela", ""))
+        # Valor como número (não string) — Excel reconhece como moeda
+        ws.cell(row=linha_idx, column=5, value=float(item.get("valor", 0.0)))
+
+    Path(destino).parent.mkdir(parents=True, exist_ok=True)
+    wb.save(destino)
+    log.info("salvar_como_xlsx: %d itens em %s", len(linhas), destino)

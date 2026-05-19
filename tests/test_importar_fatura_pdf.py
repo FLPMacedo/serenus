@@ -466,3 +466,101 @@ class TestItauParser:
         texto = extrair_texto_pdf(str(_PDF_MASTER), senha=_SENHA_ITAU)
         parser = detectar_layout(texto)
         assert parser.nome_layout == "itau"
+
+
+# ---------------------------------------------------------------------------
+# Etapa 5 — Pipeline pdf_para_linhas + salvar_como_xlsx + equivalência
+# ---------------------------------------------------------------------------
+
+class TestPdfParaLinhas:
+    def test_nubank_pipeline_completo(self):
+        from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
+        linhas, meta = pdf_para_linhas(str(_PDF_NUBANK))
+        assert len(linhas) >= 5
+        assert meta["layout"] == "nubank"
+        assert meta["tinha_senha"] is False
+        assert meta["n_itens"] == len(linhas)
+        assert meta["total"] > 0
+
+    def test_visa_pipeline_com_senha(self):
+        from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
+        linhas, meta = pdf_para_linhas(str(_PDF_VISA), senha=_SENHA_ITAU)
+        assert len(linhas) >= 4
+        assert meta["layout"] == "itau"
+        assert meta["tinha_senha"] is True
+        # VISA total deve bater com R$ 1.048,87
+        assert meta["total"] == pytest.approx(1048.87, abs=0.01)
+
+    def test_mastercard_pipeline_com_senha(self):
+        from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
+        linhas, meta = pdf_para_linhas(str(_PDF_MASTER), senha=_SENHA_ITAU)
+        assert len(linhas) >= 9
+        assert meta["layout"] == "itau"
+        assert meta["total"] == pytest.approx(1148.60, abs=0.01)
+
+    def test_pipeline_senha_errada_levanta(self):
+        from views.cartoes.importar_fatura_pdf_model import (
+            PDFSenhaIncorretaError, pdf_para_linhas,
+        )
+        with pytest.raises(PDFSenhaIncorretaError):
+            pdf_para_linhas(str(_PDF_VISA), senha="errada")
+
+    def test_pipeline_meta_inclui_ocr_usado(self):
+        """O metadata deve indicar se OCR foi usado (False por padrão até Etapa 8)."""
+        from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
+        _, meta = pdf_para_linhas(str(_PDF_NUBANK))
+        assert "ocr_usado" in meta
+        assert meta["ocr_usado"] is False
+
+
+class TestSalvarComoXlsx:
+    def test_gera_arquivo_xlsx(self, tmp_path):
+        from views.cartoes.importar_fatura_pdf_model import (
+            pdf_para_linhas, salvar_como_xlsx,
+        )
+        linhas, _ = pdf_para_linhas(str(_PDF_NUBANK))
+        destino = tmp_path / "saida.xlsx"
+        salvar_como_xlsx(linhas, str(destino))
+        assert destino.exists()
+        assert destino.stat().st_size > 0
+
+    def test_xlsx_gerado_e_lido_de_volta_por_excel_pipeline(self, tmp_path):
+        """Saída do salvar_como_xlsx é lida pelo ler_arquivo_fatura do Excel
+        e produz lista equivalente (mesmo schema, mesmos valores)."""
+        from views.cartoes.importar_fatura_model import ler_arquivo_fatura
+        from views.cartoes.importar_fatura_pdf_model import (
+            pdf_para_linhas, salvar_como_xlsx,
+        )
+        linhas_pdf, _ = pdf_para_linhas(str(_PDF_NUBANK))
+        destino = tmp_path / "intermediario.xlsx"
+        salvar_como_xlsx(linhas_pdf, str(destino))
+
+        linhas_excel = ler_arquivo_fatura(str(destino))
+
+        # Mesmo nº de itens
+        assert len(linhas_excel) == len(linhas_pdf)
+        # Mesmos valores totais (round pra evitar artefato float)
+        soma_pdf = round(sum(i["valor"] for i in linhas_pdf), 2)
+        soma_xls = round(sum(i["valor"] for i in linhas_excel), 2)
+        assert soma_pdf == soma_xls
+        # Mesmo schema
+        for i in linhas_excel:
+            assert {"descricao", "estabelecimento", "categoria",
+                    "parcela", "valor"} <= set(i.keys())
+
+    def test_xlsx_passa_na_validacao_da_pipeline_excel(self, tmp_path):
+        """Saída do PDF, lida via Excel, passa pela validar_linhas_fatura
+        sem erros — fluxo PDF é compatível com pipeline existente."""
+        from views.cartoes.importar_fatura_model import (
+            ler_arquivo_fatura, validar_linhas_fatura,
+        )
+        from views.cartoes.importar_fatura_pdf_model import (
+            pdf_para_linhas, salvar_como_xlsx,
+        )
+        linhas_pdf, _ = pdf_para_linhas(str(_PDF_VISA), senha=_SENHA_ITAU)
+        destino = tmp_path / "v.xlsx"
+        salvar_como_xlsx(linhas_pdf, str(destino))
+
+        linhas_excel = ler_arquivo_fatura(str(destino))
+        erros = validar_linhas_fatura(linhas_excel)
+        assert erros == [], f"erros inesperados: {erros}"
