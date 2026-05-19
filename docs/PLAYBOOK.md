@@ -38,6 +38,7 @@ Os prints foram capturados com o app rodando — você vai ver exatamente as mes
 14. [Registrando uma movimentação de investimento](#14-registrando-uma-movimentação-de-investimento)
 15. [Definindo uma meta financeira](#15-definindo-uma-meta-financeira)
 16. [Acompanhando o resultado — telas de consulta](#16-acompanhando-o-resultado--telas-de-consulta)
+17. [Abrindo uma Ordem de Serviço interna](#17-abrindo-uma-ordem-de-serviço-interna)
 
 ---
 
@@ -589,6 +590,99 @@ Sidebar → **📋 Plano de Contas**. Personalize as categorias usadas em Contas
 
 - **💾 Backup:** Criar/restaurar localmente ou Google Drive
 - **⚙️ Configurações:** Perfil, modo ajuda, senha, dados demo, zerar sistema
+
+---
+
+## 17. Abrindo uma Ordem de Serviço interna
+
+🎯 **Objetivo:** Registrar um chamado interno (manutenção, TI, facilities) com solicitante, materiais consumidos e mão de obra — sem afetar o financeiro do app.
+
+> *Os screenshots da tela (`14_ordens_servico.png`) e do modal (`modais/15_nova_os.png`) serão adicionados após próxima execução de `gerar_screenshots.py` com a área de trabalho limpa. Os scripts já estão prontos.*
+
+### 17.1 Tela
+
+Sidebar → **🔧 Ordens de Serviço**.
+
+Você vê os cards de OS com **número** (`OS-0001`), **badge de status** colorida (Aberta / Em andamento / Aguard. peça / Concluída / Cancelada), **solicitante** (nome · setor · ramal), **data de solicitação** e **valor total** computado (materiais + mão de obra).
+
+No topo:
+- Campo de **busca** (filtra por número, solicitante, descrição, observações)
+- Dropdown de **filtro de status**
+- Botão **📦 Produtos** (atalho para cadastrar materiais novos sem sair da tela)
+- Botão **+ Nova OS**
+
+### 17.2 Cadastrando uma OS
+
+Clique em **+ Nova OS**. O modal já mostra o próximo número (ex.: `OS-0002`) no canto superior esquerdo.
+
+Preencha:
+
+**Solicitante**
+- **Nome do contato:** "Maria Souza"
+- **Setor:** "Recursos Humanos"
+- **Ramal:** "2055"
+
+**Datas e horários**
+- **Data de solicitação:** padrão = hoje · **Hora:** "10:30"
+- **Data de execução:** deixe em branco (preenche quando o serviço for executado)
+
+**Descrição do serviço:**
+> *"Trocar lâmpadas queimadas na sala de reuniões (3 unidades) e verificar o cabeamento HDMI do projetor."*
+
+**Responsável pela execução:** "Carlos Mendes"
+
+**Materiais utilizados** — clique em **+ Adicionar item**:
+- Item 1: Selecione "Lâmpada LED 9W [produto]" do dropdown → preço preenche automático (R$ 15,90) · Quantidade: 3 · Observação: "Sala 3º andar"
+- Item 2: Deixe `(livre)` → digite "Cabo HDMI 2m" · Quantidade: 1 · Preço: 22,50
+
+**Mão de obra**
+- **Valor por hora (R$):** 65,00
+- **Horas trabalhadas:** 1,5 (aceita decimal)
+
+O rodapé do modal mostra os totais atualizando ao vivo:
+```
+Materiais: R$ 70,20
+Mão de obra: R$ 97,50  (1,5h × R$ 65,00)
+Total: R$ 167,70
+```
+
+Clique em **Registrar OS**.
+
+### 17.3 Resultado
+
+- OS criada com status **Aberta** e número sequencial
+- Aparece como primeiro card na listagem (mais recente no topo)
+- O histórico já tem 1 entrada: criação da OS
+- Os materiais ficam vinculados via FK opcional aos produtos cadastrados (se você escolheu do dropdown)
+
+💡 **Reuso de produtos:** Os produtos do módulo **Vendas** ficam disponíveis aqui — qualquer item com `tipo='produto'` ou `tipo='servico'` aparece no dropdown. Não precisa cadastrar duas vezes.
+
+### 17.4 Mudando o status
+
+Clique em **✏ Editar** no card da OS e altere o status no dropdown:
+- Atribuiu um técnico? → **Em andamento**
+- Esperando peça chegar? → **Aguard. peça**
+- Serviço executado? → **Concluída** (preencha data/hora de execução)
+- Solicitação desistiu? → Botão **Cancelar** (vermelho) na própria lista, com diálogo de confirmação
+
+Cada mudança vai para o **📋 Histórico** automaticamente.
+
+### 17.5 Imprimindo a OS em PDF
+
+Clique em **🖨 Imprimir** no card. O sistema abre o diálogo de salvar e gera um PDF com o layout padrão de mercado:
+
+- Header roxo "ORDEM DE SERVIÇO INTERNA"
+- Bloco com identificação (Nº, status, datas/horários)
+- Seções **Solicitante**, **Descrição do Serviço**, **Materiais utilizados**, **Observações gerais**
+- Linha de **TOTAL** em destaque no rodapé
+
+Nome padrão do arquivo: `OS-0002.pdf`.
+
+### 17.6 Histórico de alterações
+
+Clique em **📋 Histórico** em qualquer card para abrir a timeline. Útil em auditorias: quem mudou o quê, quando.
+
+⚠️ **OS interna não vai pro financeiro:** Materiais e mão de obra ficam **só** na OS. Não geram contas a pagar, nem aparecem no extrato/Visão Financeira. Se quiser registrar o custo no financeiro, lance manualmente em **💸 Contas a Pagar** referenciando o número da OS na descrição.
 
 ---
 

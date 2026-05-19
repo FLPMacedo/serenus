@@ -443,6 +443,45 @@ def modal_13_nova_movimentacao_invest(app):
     return modal
 
 
+def modal_15_nova_os(app):
+    """Modal de nova Ordem de Serviço (preenchida com exemplo realista)."""
+    from views.os.form_os import FormOSModal
+    from views.vendas.venda_model import salvar_produto, listar_produtos
+
+    # Garante 1+ produto para o combo de materiais
+    if not listar_produtos(apenas_ativos=True):
+        salvar_produto({"nome": "Lâmpada LED 9W", "tipo": "produto",
+                        "preco": 15.90, "descricao": "", "ativo": True})
+
+    app._navegar("os")
+    modal = FormOSModal(app, on_salvo=lambda *a, **k: None)
+    modal.update()
+    # Preenche
+    modal._e_solic_nome.insert(0, "Maria Souza")
+    modal._e_solic_setor.insert(0, "Recursos Humanos")
+    modal._e_solic_ramal.insert(0, "2055")
+    modal._e_hora_solic.insert(0, "10:30")
+    modal._t_descricao.insert("1.0",
+        "Trocar lâmpadas queimadas na sala de reuniões (3 unidades) "
+        "e verificar o cabeamento HDMI do projetor.")
+    modal._e_responsavel.insert(0, "Carlos Mendes")
+    modal._e_valor_hora.delete(0, "end")
+    modal._e_valor_hora.insert(0, "65,00")
+    modal._e_horas.insert(0, "1,5")
+    # Adiciona linha de item
+    try:
+        modal._add_item_row({
+            "produto_id": None, "descricao": "Lâmpada LED 9W",
+            "quantidade": 3.0, "preco_unit": 15.90,
+            "observacao": "Sala 3º andar",
+        })
+        modal._atualizar_totais()
+    except Exception:
+        pass
+    modal.update_idletasks()
+    return modal
+
+
 def modal_14_nova_meta(app):
     """Modal de nova meta financeira."""
     app._navegar("metas")
@@ -482,6 +521,7 @@ MODAIS = [
     ("12_nova_divida.png",             modal_12_nova_divida),
     ("13_nova_movimentacao_invest.png", modal_13_nova_movimentacao_invest),
     ("14_nova_meta.png",               modal_14_nova_meta),
+    ("15_nova_os.png",                 modal_15_nova_os),
 ]
 
 

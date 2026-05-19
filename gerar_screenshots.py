@@ -40,6 +40,8 @@ WAIT_RAPIDO = 0.6
 WAIT_GRAFICO = 1.4
 
 # Rotas da sidebar (chave_navegacao, nome_arquivo, tempo_espera_extra)
+# Numeração 01-13 preserva referências antigas no manual.
+# OS adicionada como 14 (módulo novo), sem renumerar os anteriores.
 ROTAS = [
     ("dashboard",      "01_inicio_dashboard.png",     WAIT_GRAFICO),
     ("receitas",       "02_minhas_receitas.png",      WAIT_RAPIDO),
@@ -54,6 +56,7 @@ ROTAS = [
     ("metas",          "11_metas.png",                WAIT_RAPIDO),
     ("backup",         "12_backup.png",               WAIT_RAPIDO),
     ("configuracoes",  "13_configuracoes.png",        WAIT_RAPIDO),
+    ("os",             "14_ordens_servico.png",       WAIT_RAPIDO),
 ]
 
 
@@ -105,6 +108,13 @@ def _garantir_setup_e_demo() -> None:
     except Exception as e:
         print(f"  ! Falha ao popular vendas: {e}")
 
+    # Adiciona ordens de serviço de exemplo
+    print("→ Adicionando OS de exemplo...")
+    try:
+        _adicionar_os_demo()
+    except Exception as e:
+        print(f"  ! Falha ao popular OS: {e}")
+
 
 def _adicionar_vendas_demo() -> None:
     """Cria produtos + vendas à vista e a prazo para a tela ficar rica."""
@@ -155,6 +165,118 @@ def _adicionar_vendas_demo() -> None:
     pendentes = listar_contas_receber(status="pendente")
     if pendentes:
         marcar_recebido(pendentes[0].id, dias(2))
+
+
+def _adicionar_os_demo() -> None:
+    """Cria produtos extras e 4 ordens de serviço com status variados."""
+    from datetime import date, timedelta
+    from views.vendas.venda_model import salvar_produto, listar_produtos
+    from views.os.os_model import atualizar_os, salvar_os
+
+    # Produtos típicos de OS interna (peças/insumos)
+    salvar_produto({"nome": "Filtro de ar condicionado",
+                    "tipo": "produto", "preco": 45.00,
+                    "descricao": "Filtro para split 12.000 BTU"})
+    salvar_produto({"nome": "Lâmpada LED 9W",
+                    "tipo": "produto", "preco": 15.90,
+                    "descricao": "LED branca, soquete E27"})
+    salvar_produto({"nome": "Cabo HDMI 2m",
+                    "tipo": "produto", "preco": 22.50,
+                    "descricao": "Cabo HDMI 2.0 alta velocidade"})
+
+    # Index de produtos por nome (para FK)
+    prods = {p.nome: p.id for p in listar_produtos(apenas_ativos=True)}
+
+    hoje = date.today()
+    def dias_atras(n: int) -> str:
+        return (hoje - timedelta(days=n)).isoformat()
+
+    # OS 1 — Aberta (sem execução, com materiais previstos)
+    salvar_os({
+        "solicitante_nome":  "João Silva",
+        "solicitante_setor": "Administrativo",
+        "solicitante_ramal": "1024",
+        "data_solicitacao":  dias_atras(2),
+        "hora_solicitacao":  "09:15",
+        "data_execucao":     None,
+        "hora_execucao":     "",
+        "descricao_servico":
+            "Ar condicionado da sala 12 fazendo barulho e gelando pouco. "
+            "Solicito verificação e troca do filtro se necessário.",
+        "observacoes":       "Disponível para acesso entre 14h e 17h.",
+        "responsavel":       "",
+        "status":            "aberta",
+        "valor_hora":        0.0,
+        "horas_trabalhadas": 0.0,
+    }, [])
+
+    # OS 2 — Em andamento (responsável atribuído, materiais usados)
+    salvar_os({
+        "solicitante_nome":  "Maria Souza",
+        "solicitante_setor": "Recursos Humanos",
+        "solicitante_ramal": "2055",
+        "data_solicitacao":  dias_atras(5),
+        "hora_solicitacao":  "10:30",
+        "data_execucao":     dias_atras(1),
+        "hora_execucao":     "08:00",
+        "descricao_servico":
+            "Trocar lâmpadas queimadas na sala de reuniões (3 unidades) "
+            "e verificar o cabeamento HDMI do projetor.",
+        "observacoes":       "",
+        "responsavel":       "Carlos Mendes",
+        "status":            "em_andamento",
+        "valor_hora":        65.0,
+        "horas_trabalhadas": 1.5,
+    }, [
+        {"produto_id": prods.get("Lâmpada LED 9W"),
+         "descricao": "Lâmpada LED 9W", "quantidade": 3.0,
+         "preco_unit": 15.90, "observacao": "Sala de reuniões 3º andar"},
+        {"produto_id": prods.get("Cabo HDMI 2m"),
+         "descricao": "Cabo HDMI 2m", "quantidade": 1.0,
+         "preco_unit": 22.50, "observacao": "Substituiu o anterior"},
+    ])
+
+    # OS 3 — Aguardando peça
+    salvar_os({
+        "solicitante_nome":  "Ana Pereira",
+        "solicitante_setor": "TI",
+        "solicitante_ramal": "3010",
+        "data_solicitacao":  dias_atras(8),
+        "hora_solicitacao":  "14:20",
+        "data_execucao":     None,
+        "hora_execucao":     "",
+        "descricao_servico":
+            "Servidor de backup precisa de novo HD SSD 1TB. "
+            "Aguardando chegada da peça encomendada.",
+        "observacoes":       "Fornecedor previsão: próxima sexta.",
+        "responsavel":       "Pedro Oliveira",
+        "status":            "aguardando_peca",
+        "valor_hora":        0.0,
+        "horas_trabalhadas": 0.0,
+    }, [])
+
+    # OS 4 — Concluída (com mão de obra e materiais completos)
+    oid = salvar_os({
+        "solicitante_nome":  "Carlos Eduardo",
+        "solicitante_setor": "Diretoria",
+        "solicitante_ramal": "4001",
+        "data_solicitacao":  dias_atras(15),
+        "hora_solicitacao":  "08:45",
+        "data_execucao":     dias_atras(13),
+        "hora_execucao":     "10:00",
+        "descricao_servico":
+            "Manutenção preventiva do split do escritório principal: "
+            "limpeza, troca de filtro e verificação de gás.",
+        "observacoes":       "Recomendado nova revisão em 6 meses.",
+        "responsavel":       "Carlos Mendes",
+        "status":            "concluida",
+        "valor_hora":        80.0,
+        "horas_trabalhadas": 2.0,
+    }, [
+        {"produto_id": prods.get("Filtro de ar condicionado"),
+         "descricao": "Filtro de ar condicionado", "quantidade": 1.0,
+         "preco_unit": 45.00, "observacao": ""},
+    ])
 
 
 def _capturar_janela(app, destino: Path, wait: float) -> None:

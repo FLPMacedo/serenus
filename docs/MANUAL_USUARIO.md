@@ -24,6 +24,7 @@
 15. [Exportação para Excel](#15-exportação-para-excel)
 16. [Alertas Automáticos](#16-alertas-automáticos)
 17. [Modo Demonstração](#17-modo-demonstração)
+18. [Ordens de Serviço (interna)](#18-ordens-de-serviço-interna)
 
 ---
 
@@ -43,6 +44,7 @@ A partir da **versão 2.0**, o Serenus também cobre o controle financeiro de **
 | 💰 | Minhas Receitas | Salário, aluguéis, freelas, 13º, férias, bônus e vendas realizadas |
 | 💸 | Contas a Pagar | Despesas mensais, recorrências e parcelamento no cartão |
 | 🛒 | Vendas | Produtos, serviços, vendas à vista e a prazo, contas a receber |
+| 🔧 | Ordens de Serviço | OS internas (manutenção, TI, facilities) com solicitante, materiais e mão de obra |
 | 💳 | Cartões | Faturas, compras parceladas, limite e importação de fatura |
 | 📉 | Gerenc. Dívidas | Projeção de empréstimos e financiamentos mês a mês |
 | 📋 | Plano de Contas | Categorias personalizadas de despesas |
@@ -664,6 +666,123 @@ Para explorar o sistema com dados completos sem precisar cadastrar nada:
 Os dados populados incluem: contas a pagar, fontes de receita, cartões com compras parceladas, dívidas, produtos, vendas, investimentos e metas — com histórico de meses anteriores e projeção futura já preenchidos.
 
 Para experimentar a **importação de fatura**, use o modo demonstração (perfil "Padrão" tem 2 cartões), depois baixe o template XLSX, preencha com itens de teste e importe.
+
+---
+
+## 18. Ordens de Serviço (interna) *(módulo novo — v2.1)*
+
+O módulo de **Ordem de Serviço (OS)** controla solicitações internas de manutenção, TI, facilities e qualquer outro tipo de chamado entre setores da empresa. Diferente do módulo de Vendas, **OS não gera lançamento financeiro automático** — os valores (materiais consumidos + mão de obra) ficam registrados apenas na própria OS, para compreensão e rastreabilidade do serviço.
+
+> *Screenshots da tela e do modal de cadastro serão adicionados após próxima execução de `gerar_screenshots.py` com a área de trabalho limpa.*
+
+### 18.1 Abrindo uma nova OS
+
+1. Sidebar → **🔧 Ordens de Serviço** → **+ Nova OS**
+2. O número da OS é gerado automaticamente no formato **OS-NNNN** (sequencial, nunca reusa números)
+3. Preencha as seções:
+
+   **Solicitante:**
+   - **Nome do contato** (obrigatório)
+   - **Setor** (ex.: TI, RH, Administrativo)
+   - **Ramal** (telefone interno)
+
+   **Datas e horários:**
+   - **Data de solicitação** (padrão: hoje) e **hora** (HH:MM)
+   - **Data de execução** e **hora** (opcionais — preenchidos quando o serviço for executado)
+
+   **Conteúdo:**
+   - **Descrição do serviço** — bloco de texto multilinha com o que precisa ser feito
+   - **Responsável pela execução** — quem vai/foi executar
+   - **Observações gerais** — texto multilinha para informações adicionais
+
+4. Clique em **Registrar OS**
+
+### 18.2 Materiais utilizados
+
+A lista de materiais reusa o cadastro de **produtos do módulo Vendas** — qualquer item cadastrado lá (com `tipo` *produto* ou *serviço*) aparece no dropdown.
+
+1. Na seção **Materiais utilizados**, clique em **+ Adicionar item**
+2. Para cada material:
+   - Escolha do dropdown (preenche descrição e preço) **ou** deixe `(livre)` e digite manualmente
+   - **Quantidade** (aceita decimal: 1,5)
+   - **Preço unitário** (preenche se escolheu produto)
+   - **Observação** específica do item (opcional — ex.: "Sala 3º andar")
+3. Repita para cada material
+4. Clique em **✕** ao lado de uma linha para removê-la
+
+> **Sem cadastro prévio:** você pode descrever o material livremente sem precisar cadastrá-lo antes. O cadastro só facilita reuso e o cálculo automático de preço.
+
+### 18.3 Mão de obra
+
+Na seção **Mão de obra**, informe:
+- **Valor por hora (R$)** — quanto custa a hora do executor
+- **Horas trabalhadas** — aceita decimal (ex.: `2,5` para 2h30)
+
+O sistema calcula automaticamente:
+- **Mão de obra** = valor por hora × horas trabalhadas
+- **Total da OS** = materiais + mão de obra
+
+O bloco de resumo no rodapé do formulário atualiza em tempo real conforme você digita.
+
+### 18.4 Status da OS
+
+Cada OS tem um status, mostrado como badge colorida na listagem:
+
+| Status | Cor | Quando usar |
+|--------|-----|-------------|
+| **Aberta** | Amarelo | Recém criada, aguardando atendimento |
+| **Em andamento** | Azul | Responsável atribuído, execução em curso |
+| **Aguard. peça** | Laranja | Pausada esperando material/peça chegar |
+| **Concluída** | Verde | Serviço finalizado |
+| **Cancelada** | Cinza | OS desistida (registrada no histórico) |
+
+Para alterar o status: edite a OS (botão **✏ Editar**) e selecione o novo status no dropdown.
+
+### 18.5 Listagem, filtros e busca
+
+A tela principal mostra os cards das OS com: número, badge de status, solicitante (nome · setor · ramal), data de solicitação, descrição truncada e valor total computado.
+
+- **Busca textual** — campo no topo busca em número, solicitante, descrição e observações (case-insensitive)
+- **Filtro de status** — dropdown ao lado da busca: Todos / Aberta / Em andamento / Aguard. peça / Concluída / Cancelada
+- **Cabeçalho resumido** — total de OS visíveis · quantas em curso · soma dos totais
+
+### 18.6 Editando e cancelando
+
+- **✏ Editar** — abre o modal de cadastro preenchido com a OS atual. Você pode alterar qualquer campo, adicionar/remover materiais e ajustar mão de obra. Cada mudança é registrada no histórico.
+- **Cancelar** — botão vermelho. Pede confirmação (não pode ser desfeito). A OS muda para status *Cancelada* e a transição vai para o histórico.
+
+### 18.7 Histórico de alterações
+
+Clique em **📋 Histórico** em qualquer card para abrir a timeline de alterações:
+
+- Cada alteração mostra: data/hora · campo alterado · valor anterior → valor novo
+- A criação da OS aparece como primeira entrada (campo `criacao` → número gerado)
+- Cancelamentos aparecem como mudança de status
+
+Útil para auditoria: "quem alterou o quê e quando".
+
+### 18.8 Impressão em PDF
+
+Clique em **🖨 Imprimir** em qualquer card para gerar um PDF da OS no layout padrão de mercado, modernizado:
+
+- Header roxo "ORDEM DE SERVIÇO INTERNA"
+- Bloco com número, status, datas/horários
+- Seções **Solicitante**, **Descrição do Serviço**, **Materiais utilizados**, **Observações gerais**
+- Linha de **TOTAL** em destaque no rodapé (materiais + mão de obra)
+
+O PDF é salvo no caminho que você escolher no diálogo (nome padrão: `OS-NNNN.pdf`).
+
+### 18.9 Cadastro auxiliar de produtos
+
+Use o botão **📦 Produtos** no topo da tela para abrir o mesmo modal de produtos do módulo Vendas — sem precisar navegar até lá. Útil para cadastrar peças novas antes de criar a OS.
+
+### 18.10 Isolamento financeiro
+
+OS interna **não cria contas a pagar, não gera receitas e não aparece no extrato/Visão Financeira**. Esta é uma decisão arquitetural: materiais consumidos já foram pagos no momento da compra (registrada separadamente em Contas a Pagar), e mão de obra interna não é despesa nova.
+
+Se você precisa lançar o custo de uma OS no financeiro, faça-o manualmente em **💸 Contas a Pagar** referenciando o número da OS na descrição.
+
+> **Diferença vs Vendas:** Vendas é para serviços/produtos vendidos a clientes externos (gera receita). OS é para serviços internos entre setores (não gera receita).
 
 ---
 
