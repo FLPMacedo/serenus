@@ -241,6 +241,21 @@ class TestCRUDOS:
         assert lista[0].id == oid2
         assert lista[1].id == oid1
 
+    def test_listar_os_carrega_itens_para_totais_corretos(self, banco):
+        """REGRESSAO: listar_os deve carregar itens, senao os cards da
+        listagem mostram total_materiais=0 (so valor_mao_obra)."""
+        from views.os.os_model import salvar_os, listar_os
+        salvar_os(_dados_os(), [
+            _item("Material A", 2.0, 50.0),
+            _item("Material B", 1.0, 30.0),
+        ])
+        lista = listar_os()
+        assert len(lista) == 1
+        assert len(lista[0].itens) == 2, \
+            "listar_os precisa carregar itens senao a view mostra totais errados"
+        assert lista[0].total_materiais == pytest.approx(130.0)
+        assert lista[0].valor_total == pytest.approx(130.0)
+
     def test_atualizar_os_altera_campos(self, banco):
         from views.os.os_model import salvar_os, atualizar_os, obter_os
         oid = salvar_os(_dados_os(), [])

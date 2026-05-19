@@ -385,7 +385,25 @@ def listar_os(status: str | None = None,
 
     with conectar() as conn:
         rows = conn.execute(sql, params).fetchall()
-    lista = [_row_to_os(r) for r in rows]
+        lista = [_row_to_os(r) for r in rows]
+
+        # Carrega itens em batch (1 query) para popular as properties
+        # total_materiais e valor_total — usadas pelos cards da listagem.
+        if lista:
+            os_ids       = [o.id for o in lista]
+            placeholders = ",".join("?" * len(os_ids))
+            itens_rows   = conn.execute(
+                f"SELECT * FROM itens_os WHERE os_id IN ({placeholders})"
+                " ORDER BY os_id, id",
+                os_ids,
+            ).fetchall()
+            itens_por_os: dict[int, list[ItemOS]] = {}
+            for r in itens_rows:
+                itens_por_os.setdefault(r["os_id"], []).append(
+                    _row_to_item_os(r)
+                )
+            for o in lista:
+                o.itens = itens_por_os.get(o.id, [])
 
     if busca:
         b = busca.lower()
