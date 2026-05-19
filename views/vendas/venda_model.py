@@ -280,6 +280,11 @@ def salvar_venda(dados: dict, itens: list[dict]) -> int:
     valor_total   = round(sum(i["subtotal"] for i in itens), 2)
     desconto      = round(float(dados.get("desconto", 0.0)), 2)
     valor_liquido = round(valor_total - desconto, 2)
+    if valor_liquido <= 0:
+        raise ValueError(
+            f"Valor líquido deve ser maior que zero "
+            f"(total={valor_total:.2f}, desconto={desconto:.2f})."
+        )
     status        = "paga" if tipo == "avista" else "pendente"
 
     with conectar() as conn:

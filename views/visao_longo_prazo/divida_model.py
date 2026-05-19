@@ -190,7 +190,15 @@ def status_horizonte(dividas: list[Divida], meses: int) -> list[dict]:
         # Progresso em relação ao total da dívida
         total_pago_periodo = pagas_no_horizonte * d.parcela_mensal
         saldo_restante = max(0.0, d.saldo_atual - total_pago_periodo)
-        pct_quitado_total = (d.parcelas_pagas + pagas_no_horizonte) / d.total_parcelas * 100
+        # Dívidas de cartão são criadas com total_parcelas=0 (parcelas vão
+        # sendo adicionadas com o tempo). Evita ZeroDivisionError.
+        if d.total_parcelas > 0:
+            pct_quitado_total = (d.parcelas_pagas + pagas_no_horizonte) / d.total_parcelas * 100
+        else:
+            # Sem total definido — usa proporção saldo já quitado / saldo + pagos
+            pago_estimado = d.parcelas_pagas * d.parcela_mensal + total_pago_periodo
+            total_estimado = pago_estimado + saldo_restante
+            pct_quitado_total = (pago_estimado / total_estimado * 100) if total_estimado > 0 else 0.0
 
         resultado.append({
             "divida":          d,

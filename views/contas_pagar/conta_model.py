@@ -258,11 +258,14 @@ def atualizar_recorrentes_futuros(conta_id: int, dados: dict) -> int:
 
 
 def marcar_pago(id: int):
+    """Marca uma despesa como paga. No-op se já estiver paga ou cancelada
+    — evita ressuscitar canceladas e sobrescrever data_pagamento original."""
     hoje = date.today().isoformat()
     with conectar() as conn:
         conn.execute(
-            "UPDATE contas_pagar SET status='pago', data_pagamento=? WHERE id=?",
-            (hoje, id)
+            "UPDATE contas_pagar SET status='pago', data_pagamento=?"
+            " WHERE id=? AND status='pendente'",
+            (hoje, id),
         )
 
 

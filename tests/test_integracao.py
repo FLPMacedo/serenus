@@ -702,6 +702,193 @@ def _dados_os_min(nome: str = "Solicitante", data: str | None = None) -> dict:
     }
 
 
+class TestBugsRevisaoCompleta:
+    """Bugs achados na revisão completa do Serenus — auditoria sistemática."""
+
+    def test_divida_horizonte_zero_div_com_total_parcelas_zero(self, banco):
+        """divida_model.status_horizonte dividia por d.total_parcelas; quando
+        é uma dívida de cartão (criada com total_parcelas=0), crashava com
+        ZeroDivisionError. Fix: branch para total_parcelas=0."""
+        from views.visao_longo_prazo.divida_model import (
+            listar_dividas, status_horizonte,
+        )
+        from database import conectar
+        from datetime import datetime
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with conectar() as conn:
+            conn.execute(
+                "INSERT INTO dividas (nome, tipo, saldo_atual, parcela_mensal,"
+                " total_parcelas, parcelas_pagas, ativa, criado_em)"
+                " VALUES ('Cartao Bug', 'cartao', 1000.0, 100.0, 0, 0, 1, ?)",
+                (agora,),
+            )
+        # NÃO deve crashar (ZeroDivisionError). Outras dívidas podem existir
+        # via popular_dados_exemplo — só nos interessa a que acabamos de criar.
+        dividas = listar_dividas()
+        resultado = status_horizonte(dividas, 12)  # crashava aqui antes
+        nossa = next(
+            (r for r in resultado if r["divida"].nome == "Cartao Bug"), None
+        )
+        assert nossa is not None
+        assert 0 <= nossa["pct"] <= 100, \
+            "pct deve ser proporção válida mesmo com total_parcelas=0"
+
+    def test_marcar_pago_nao_ressuscita_cancelada(self, banco):
+        """marcar_pago não pode reativar conta cancelada (idempotência)."""
+        from views.contas_pagar.conta_model import marcar_pago
+        from database import conectar
+        from datetime import datetime
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with conectar() as conn:
+            cur = conn.execute(
+                "INSERT INTO contas_pagar (descricao, valor, data_vencimento,"
+                " status, recorrente, criado_em)"
+                " VALUES ('X', 100.0, ?, 'cancelado', 0, ?)",
+                (_HOJE, agora),
+            )
+            cp_id = cur.lastrowid
+
+        marcar_pago(cp_id)
+
+        with conectar() as conn:
+            status = conn.execute(
+                "SELECT status FROM contas_pagar WHERE id=?", (cp_id,)
+            ).fetchone()[0]
+        assert status == "cancelado", \
+            "marcar_pago não pode ressuscitar conta cancelada"
+
+    def test_marcar_pago_nao_sobrescreve_data_pagamento(self, banco):
+        """marcar_pago chamado 2x não pode mudar data_pagamento original."""
+        from views.contas_pagar.conta_model import marcar_pago
+        from database import conectar
+        from datetime import datetime, date as _date, timedelta
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ontem = (_date.today() - timedelta(days=1)).isoformat()
+        with conectar() as conn:
+            cur = conn.execute(
+                "INSERT INTO contas_pagar (descricao, valor, data_vencimento,"
+                " data_pagamento, status, recorrente, criado_em)"
+                " VALUES ('Y', 50.0, ?, ?, 'pago', 0, ?)",
+                (_HOJE, ontem, agora),
+            )
+            cp_id = cur.lastrowid
+
+        marcar_pago(cp_id)  # tenta marcar de novo
+
+        with conectar() as conn:
+            data_pg = conn.execute(
+                "SELECT data_pagamento FROM contas_pagar WHERE id=?", (cp_id,)
+            ).fetchone()[0]
+        assert data_pg == ontem, \
+            "data_pagamento original (ontem) não pode ser sobrescrita por hoje"
+
+    def test_marcar_parcela_paga_idempotente(self, banco):
+        """marcar_parcela_paga não pode sobrescrever data nem ressuscitar."""
+        from views.cartoes.cartao_model import marcar_parcela_paga
+        from database import conectar
+        from datetime import datetime, date as _date, timedelta
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ontem = (_date.today() - timedelta(days=1)).isoformat()
+        with conectar() as conn:
+            # Cartão e compra mínimos
+            cur = conn.execute(
+                "INSERT INTO cartoes (nome, banco, bandeira, criado_em)"
+                " VALUES ('Test', 'banco', 'visa', ?)",
+                (agora,),
+            )
+            cartao_id = cur.lastrowid
+            cur = conn.execute(
+                "INSERT INTO compras_cartao (cartao_id, descricao, valor_total,"
+                " valor_parcela, total_parcelas, mes_inicio, criado_em)"
+                " VALUES (?, 'C', 100.0, 100.0, 1, '2026-01', ?)",
+                (cartao_id, agora),
+            )
+            compra_id = cur.lastrowid
+            cur = conn.execute(
+                "INSERT INTO parcelas_cartao (compra_id, cartao_id, numero_parcela,"
+                " mes_referencia, valor, status, data_pagamento)"
+                " VALUES (?,?,1,'2026-01',100.0,'pago',?)",
+                (compra_id, cartao_id, ontem),
+            )
+            parc_id = cur.lastrowid
+
+        marcar_parcela_paga(parc_id)  # já paga, tenta de novo
+
+        with conectar() as conn:
+            data_pg = conn.execute(
+                "SELECT data_pagamento FROM parcelas_cartao WHERE id=?", (parc_id,)
+            ).fetchone()[0]
+        assert data_pg == ontem, \
+            "data_pagamento da parcela original não pode ser sobrescrita"
+
+    def test_lancar_fatura_dia_31_fevereiro_nao_grava_data_invalida(self, banco):
+        """lancar_fatura_contas_pagar deve capar dia ao último dia do mês."""
+        from views.cartoes.cartao_model import (
+            lancar_fatura_contas_pagar, salvar_cartao,
+        )
+        from database import conectar
+        from datetime import datetime
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Cartão com dia_vencimento=31
+        cartao_id = salvar_cartao({
+            "nome": "Card31", "banco": "banco", "bandeira": "visa",
+            "limite": 1000.0, "limite_disponivel": 1000.0,
+            "dia_vencimento": 31, "dia_fechamento": 25,
+        })
+        # Insere parcela pendente em fev/2026
+        with conectar() as conn:
+            cur = conn.execute(
+                "INSERT INTO compras_cartao (cartao_id, descricao, valor_total,"
+                " valor_parcela, total_parcelas, mes_inicio, criado_em)"
+                " VALUES (?, 'C', 200.0, 200.0, 1, '2026-02', ?)",
+                (cartao_id, agora),
+            )
+            compra_id = cur.lastrowid
+            conn.execute(
+                "INSERT INTO parcelas_cartao (compra_id, cartao_id, numero_parcela,"
+                " mes_referencia, valor, status)"
+                " VALUES (?,?,1,'2026-02',200.0,'pendente')",
+                (compra_id, cartao_id),
+            )
+
+        # Lança fatura de fev/2026 — dia 31 não existe, deve capar pra 28
+        lancar_fatura_contas_pagar(cartao_id, 2, 2026)
+
+        with conectar() as conn:
+            data_venc = conn.execute(
+                "SELECT data_vencimento FROM contas_pagar"
+                " WHERE plano_conta_id IN"
+                " (SELECT id FROM plano_contas WHERE nome LIKE 'Cartão%')"
+                " ORDER BY id DESC LIMIT 1"
+            ).fetchone()[0]
+
+        # Deve ser uma data ISO válida (não "2026-02-31")
+        from datetime import date as _date
+        try:
+            d = _date.fromisoformat(data_venc)
+        except ValueError:
+            pytest.fail(f"data_vencimento inválida gerada: {data_venc!r}")
+        assert d.month == 2 and d.year == 2026
+        assert d.day <= 28
+
+    def test_venda_aprazo_com_desconto_maior_que_total_e_rejeitada(self, banco):
+        """Venda com desconto > valor_total geraria parcelas negativas. Rejeitar."""
+        from views.vendas.venda_model import salvar_venda
+
+        # Tenta salvar venda com 1 item de R$100 e desconto de R$200
+        with pytest.raises((ValueError, Exception)) as excinfo:
+            salvar_venda(
+                {"descricao": "Bug", "data_venda": _HOJE,
+                 "tipo_pagamento": "aprazo", "parcelas": 2,
+                 "data_primeira_parcela": _HOJE, "desconto": 200.0},
+                [{"descricao": "X", "quantidade": 1.0,
+                  "preco_unit": 100.0, "produto_id": None}],
+            )
+        # Aceita qualquer exceção (preferencialmente ValueError) com mensagem útil
+        assert excinfo.value is not None
+
+
 class TestExclusaoContaPagarOrfaInvestimento:
     """Excluir conta_pagar gerada por movimentacao de investimento deve
     bloquear com mensagem clara (nao FOREIGN KEY constraint failed cru)."""

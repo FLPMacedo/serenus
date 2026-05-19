@@ -476,12 +476,17 @@ def listar_parcelas_mes(cartao_id: int, mes: int, ano: int) -> list[ParcelaCarta
 
 
 def marcar_parcela_paga(id: int):
+    """Marca uma parcela como paga. No-op se já estiver paga ou cancelada
+    — evita sobrescrever data_pagamento original."""
     hoje = date.today().isoformat()
     with conectar() as conn:
-        conn.execute(
-            "UPDATE parcelas_cartao SET status='pago', data_pagamento=? WHERE id=?",
-            (hoje, id)
+        cur = conn.execute(
+            "UPDATE parcelas_cartao SET status='pago', data_pagamento=?"
+            " WHERE id=? AND status='pendente'",
+            (hoje, id),
         )
+        if cur.rowcount == 0:
+            return  # já estava paga/cancelada
         row = conn.execute("SELECT cartao_id FROM parcelas_cartao WHERE id=?", (id,)).fetchone()
         if row:
             _atualizar_divida_cartao(conn, row["cartao_id"])
@@ -635,13 +640,13 @@ def lancar_fatura_contas_pagar(cartao_id: int, mes: int, ano: int):
         else:
             plano_id = plano["id"]
 
-        # Data de vencimento da fatura
+        # Data de vencimento da fatura — capa o dia ao último dia do mês
+        # pra evitar gravar datas inválidas como '2026-02-31'.
+        from calendar import monthrange
         dia_venc = cartao["dia_vencimento"] or 10
-        try:
-            from datetime import date as dt
-            venc = f"{ano:04d}-{mes:02d}-{dia_venc:02d}"
-        except Exception:
-            venc = f"{ano:04d}-{mes:02d}-10"
+        ultimo_dia = monthrange(ano, mes)[1]
+        dia_seguro = min(int(dia_venc), ultimo_dia)
+        venc = f"{ano:04d}-{mes:02d}-{dia_seguro:02d}"
 
         agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn.execute("""
