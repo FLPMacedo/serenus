@@ -247,23 +247,67 @@ class CartoesView(ctk.CTkFrame):
                                          self._toast(msg)))
 
     def _abrir_menu_import(self, cartao, widget):
-        """Mostra menu popup com opções Excel/CSV e PDF logo abaixo do botão."""
-        from tkinter import Menu
-        menu = Menu(self, tearoff=0)
-        menu.add_command(
-            label="📊  Excel / CSV (XLSX)",
-            command=lambda c=cartao: self._importar_excel(c),
-        )
-        menu.add_command(
-            label="📄  PDF da fatura",
-            command=lambda c=cartao: self._importar_pdf(c),
-        )
+        """Abre um diálogo CTk pequeno pedindo o tipo de fatura a importar.
+
+        Substituiu o antigo tk.Menu.tk_popup que tinha glitches de
+        renderização em algumas instalações Windows — diálogo CTk é
+        mais previsível e consistente com o resto da UI.
+        """
+        cores = self._cores
+        dlg = ctk.CTkToplevel(self)
+        dlg.title("Importar fatura")
+        dlg.geometry("420x220")
+        dlg.resizable(False, False)
+        dlg.grab_set()
+        # Posiciona perto do botão clicado
         try:
             x = widget.winfo_rootx()
-            y = widget.winfo_rooty() + widget.winfo_height()
-            menu.tk_popup(x, y)
-        finally:
-            menu.grab_release()
+            y = widget.winfo_rooty() + widget.winfo_height() + 4
+            dlg.geometry(f"+{x}+{y}")
+        except Exception:
+            pass
+
+        cab = "Importar fatura do cartão"
+        if cartao is not None:
+            cab = f"Importar fatura — {cartao.nome}"
+        ctk.CTkLabel(
+            dlg, text=cab,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=cores["texto"],
+        ).pack(pady=(16, 4), padx=20)
+        ctk.CTkLabel(
+            dlg, text="Escolha o tipo de arquivo:",
+            font=ctk.CTkFont(size=11),
+            text_color=cores["texto_mudo"],
+        ).pack(pady=(0, 12), padx=20)
+
+        # Botões
+        def _excel():
+            dlg.destroy()
+            self._importar_excel(cartao)
+
+        def _pdf():
+            dlg.destroy()
+            self._importar_pdf(cartao)
+
+        btns = ctk.CTkFrame(dlg, fg_color="transparent")
+        btns.pack(pady=4, padx=20, fill="x")
+        btns.grid_columnconfigure((0, 1), weight=1)
+        ctk.CTkButton(
+            btns, text="📊  Excel / CSV",
+            height=46, command=_excel,
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        ctk.CTkButton(
+            btns, text="📄  PDF da fatura",
+            height=46, command=_pdf,
+        ).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+
+        ctk.CTkButton(
+            dlg, text="Cancelar", width=100, height=28,
+            fg_color="transparent", border_width=1,
+            border_color=cores["borda"], text_color=cores["texto"],
+            command=dlg.destroy,
+        ).pack(pady=(14, 14))
 
     def _importar_excel(self, cartao):
         from views.cartoes.importar_fatura_modal import ImportarFaturaModal
