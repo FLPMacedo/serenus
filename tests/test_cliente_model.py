@@ -280,3 +280,93 @@ class TestBuscaCliente:
         assert len(buscar_clientes("999.888")) == 1
         # busca por domínio do email
         assert len(buscar_clientes("empresa.com")) == 1
+
+
+# ---------------------------------------------------------------------------
+# A3 — Integração com os_model (cliente_id em salvar/atualizar/listar/obter)
+# ---------------------------------------------------------------------------
+
+def _dados_os_base(data: str = "2026-05-19") -> dict:
+    """Builder base de dados pra OS (igual ao test_os_model)."""
+    return {
+        "solicitante_nome":  "",
+        "solicitante_setor": "",
+        "solicitante_ramal": "",
+        "data_solicitacao":  data,
+        "hora_solicitacao":  "",
+        "data_execucao":     None,
+        "hora_execucao":     "",
+        "descricao_servico": "",
+        "observacoes":       "",
+        "responsavel":       "",
+        "status":            "aberta",
+        "valor_hora":        0.0,
+        "horas_trabalhadas": 0.0,
+    }
+
+
+class TestOSComCliente:
+    def test_salvar_os_aceita_cliente_id(self, banco):
+        from views.os.cliente_model import salvar_cliente
+        from views.os.os_model import obter_os, salvar_os
+        cid = salvar_cliente(_dados_cli("Ana"))
+        oid = salvar_os({**_dados_os_base(), "cliente_id": cid}, [])
+        os_obj = obter_os(oid)
+        assert os_obj.cliente_id == cid
+
+    def test_os_sem_cliente_id_funciona(self, banco):
+        """Retrocompat: OS antiga ainda pode ser salva sem cliente_id."""
+        from views.os.os_model import obter_os, salvar_os
+        oid = salvar_os({**_dados_os_base(), "solicitante_nome": "Avulso"}, [])
+        os_obj = obter_os(oid)
+        assert os_obj.cliente_id is None
+        assert os_obj.solicitante_nome == "Avulso"
+
+    def test_atualizar_os_pode_vincular_cliente(self, banco):
+        """OS sem cliente pode ser editada para vincular a um cliente."""
+        from views.os.cliente_model import salvar_cliente
+        from views.os.os_model import atualizar_os, obter_os, salvar_os
+        oid = salvar_os({**_dados_os_base(), "solicitante_nome": "Antes"}, [])
+        cid = salvar_cliente(_dados_cli("Vinc"))
+        atualizar_os(oid, {**_dados_os_base(), "cliente_id": cid,
+                            "solicitante_nome": "Antes"}, [])
+        os_obj = obter_os(oid)
+        assert os_obj.cliente_id == cid
+
+    def test_atualizar_os_registra_diff_no_historico(self, banco):
+        """Alterar cliente_id deve aparecer no histórico."""
+        from views.os.cliente_model import salvar_cliente
+        from views.os.os_model import atualizar_os, listar_historico, salvar_os
+        oid = salvar_os(_dados_os_base(), [])
+        cid = salvar_cliente(_dados_cli("Novo"))
+        atualizar_os(oid, {**_dados_os_base(), "cliente_id": cid}, [])
+        hist = listar_historico(oid)
+        campos = [h.campo for h in hist]
+        assert "cliente_id" in campos
+
+    def test_listar_os_filtra_por_cliente(self, banco):
+        """listar_os(cliente_id=X) retorna só OS daquele cliente."""
+        from views.os.cliente_model import salvar_cliente
+        from views.os.os_model import listar_os, salvar_os
+        c1 = salvar_cliente(_dados_cli("A"))
+        c2 = salvar_cliente(_dados_cli("B"))
+        salvar_os({**_dados_os_base(), "cliente_id": c1}, [])
+        salvar_os({**_dados_os_base(), "cliente_id": c1}, [])
+        salvar_os({**_dados_os_base(), "cliente_id": c2}, [])
+        salvar_os(_dados_os_base(), [])  # sem cliente
+
+        do_a = listar_os(cliente_id=c1)
+        assert len(do_a) == 2
+        do_b = listar_os(cliente_id=c2)
+        assert len(do_b) == 1
+        # Sem filtro: todas
+        assert len(listar_os()) == 4
+
+    def test_obter_os_devolve_cliente_id(self, banco):
+        from views.os.cliente_model import salvar_cliente
+        from views.os.os_model import obter_os, salvar_os
+        cid = salvar_cliente(_dados_cli())
+        oid = salvar_os({**_dados_os_base(), "cliente_id": cid}, [])
+        os_obj = obter_os(oid)
+        assert hasattr(os_obj, "cliente_id")
+        assert os_obj.cliente_id == cid

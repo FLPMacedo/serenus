@@ -53,6 +53,7 @@ class OSHistorico:
 class OrdemServico:
     id:                 int
     numero:             str
+    cliente_id:         Optional[int]
     solicitante_nome:   str
     solicitante_setor:  str
     solicitante_ramal:  str
@@ -91,6 +92,7 @@ def _row_to_os(r) -> OrdemServico:
     return OrdemServico(
         id=d["id"],
         numero=d["numero"],
+        cliente_id=d.get("cliente_id"),
         solicitante_nome=d.get("solicitante_nome") or "",
         solicitante_setor=d.get("solicitante_setor") or "",
         solicitante_ramal=d.get("solicitante_ramal") or "",
@@ -140,6 +142,7 @@ def _row_to_historico(r) -> OSHistorico:
 # ---------------------------------------------------------------------------
 
 _CAMPOS_RASTREADOS_OS = [
+    "cliente_id",
     "solicitante_nome", "solicitante_setor", "solicitante_ramal",
     "data_solicitacao", "hora_solicitacao",
     "data_execucao",    "hora_execucao",
@@ -224,15 +227,17 @@ def salvar_os(dados: dict, itens: list[dict]) -> int:
     with conectar() as conn:
         cur = conn.execute(
             """INSERT INTO ordens_servico
-               (numero, solicitante_nome, solicitante_setor, solicitante_ramal,
+               (numero, cliente_id,
+                solicitante_nome, solicitante_setor, solicitante_ramal,
                 data_solicitacao, hora_solicitacao,
                 data_execucao, hora_execucao,
                 descricao_servico, observacoes,
                 responsavel, status,
                 valor_hora, horas_trabalhadas, criado_em)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 numero,
+                dados.get("cliente_id"),
                 dados.get("solicitante_nome", ""),
                 dados.get("solicitante_setor", ""),
                 dados.get("solicitante_ramal", ""),
@@ -285,6 +290,7 @@ def atualizar_os(id: int, dados: dict, itens: list[dict]) -> None:
 
         conn.execute(
             """UPDATE ordens_servico SET
+                cliente_id=?,
                 solicitante_nome=?, solicitante_setor=?, solicitante_ramal=?,
                 data_solicitacao=?, hora_solicitacao=?,
                 data_execucao=?,    hora_execucao=?,
@@ -293,6 +299,7 @@ def atualizar_os(id: int, dados: dict, itens: list[dict]) -> None:
                 valor_hora=?, horas_trabalhadas=?
                WHERE id=?""",
             (
+                dados.get("cliente_id",        atual.cliente_id),
                 dados.get("solicitante_nome",  atual.solicitante_nome),
                 dados.get("solicitante_setor", atual.solicitante_setor),
                 dados.get("solicitante_ramal", atual.solicitante_ramal),
@@ -352,7 +359,8 @@ def listar_os(status: str | None = None,
               ano:    int | None = None,
               mes:    int | None = None,
               solicitante: str | None = None,
-              busca:  str | None = None) -> list[OrdemServico]:
+              busca:  str | None = None,
+              cliente_id: int | None = None) -> list[OrdemServico]:
     """Lista ordens de serviço com filtros opcionais.
 
     - status: 'aberta' | 'em_andamento' | 'aguardando_peca' | 'concluida' | 'cancelada'
@@ -360,6 +368,7 @@ def listar_os(status: str | None = None,
     - solicitante: LIKE case-insensitive em solicitante_nome
     - busca: LIKE case-insensitive em numero, solicitante_nome,
              descricao_servico, observacoes (filtragem em Python para unicode seguro)
+    - cliente_id: retorna apenas OS vinculadas ao cliente indicado
     """
     sql    = "SELECT * FROM ordens_servico"
     conds  = []
@@ -378,6 +387,10 @@ def listar_os(status: str | None = None,
     if solicitante:
         conds.append("LOWER(solicitante_nome) LIKE ?")
         params.append(f"%{solicitante.lower()}%")
+
+    if cliente_id is not None:
+        conds.append("cliente_id = ?")
+        params.append(cliente_id)
 
     if conds:
         sql += " WHERE " + " AND ".join(conds)
