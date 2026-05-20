@@ -467,6 +467,34 @@ class TestItauParser:
         parser = detectar_layout(texto)
         assert parser.nome_layout == "itau"
 
+    def test_d_filipe_hardcoded_removido(self):
+        """Bug D: o regex _LINHA_AUXILIAR não deve conter o nome próprio
+        'FILIPE' (hardcoded pelo dev). Deve filtrar headers de titular por
+        padrão genérico ou simplesmente não filtrar (a regex de transação
+        já descarta linhas sem data)."""
+        import re
+        from views.cartoes.pdf_parsers import itau as itau_mod
+        # Garante que não bate em nomes arbitrários
+        texto_filipe = itau_mod._LINHA_AUXILIAR.pattern
+        assert "FILIPE" not in texto_filipe.upper(), \
+            "regex hardcoded com 'FILIPE' — remover"
+
+    def test_e_descricao_vazia_e_rejeitada(self):
+        """Bug E: linha tipo '14/11  05/12 168,73' (sem nome de
+        estabelecimento) não pode virar item com descricao='' silenciosamente."""
+        from views.cartoes.pdf_parsers.itau import ItauParser
+        # Simula um texto Itaú mínimo com uma linha sem descrição
+        texto = (
+            "Lançamentos: produtos e serviços\n"
+            "DATA PRODUTOS/SERVIÇOS VALOR EM R$\n"
+            "14/11  05/12 168,73\n"  # sem descrição entre data e parcela
+            "Total dos lançamentos atuais 168,73\n"
+        )
+        itens = ItauParser().extrair(texto)
+        # Item sem descrição NÃO deve ser incluído
+        for i in itens:
+            assert i["descricao"], f"item com descrição vazia foi aceito: {i}"
+
 
 # ---------------------------------------------------------------------------
 # Etapa 8 — OCR fallback (graceful degradation)

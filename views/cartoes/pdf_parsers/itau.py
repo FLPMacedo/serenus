@@ -64,9 +64,11 @@ _FIM_CAPTURA = re.compile(
 # Cabeçalho da tabela ("DATA ESTABELECIMENTO VALOR EM R$" ou similar) — pular
 _HEADER_TABELA = re.compile(r"^DATA\s+", re.IGNORECASE)
 
-# Linhas de detalhamento que NÃO são transações
+# Linhas de detalhamento que NÃO são transações.
+# Não inclui o nome do titular — esse é descartado naturalmente pela regex
+# _TRANSACAO (linhas que não começam com DD/MM não casam).
 _LINHA_AUXILIAR = re.compile(
-    r"^(?:Principal\s*\(|outros\b|FILIPE\b|Compras parceladas|Total\b)",
+    r"^(?:Principal\s*\(|outros\b|Compras parceladas|Total\b)",
     re.IGNORECASE,
 )
 
@@ -128,6 +130,11 @@ class ItauParser(PDFParser):
 
             descricao = m.group("desc").strip()
             descricao = re.sub(r"\s+", " ", descricao)
+            if not descricao:
+                # Defesa contra layouts esquisitos (data + parcela + valor sem
+                # nome de estabelecimento entre eles). Sem descrição não há
+                # como identificar a compra — pula.
+                continue
             parcela_str = m.group("parcela") or ""
 
             itens.append({
