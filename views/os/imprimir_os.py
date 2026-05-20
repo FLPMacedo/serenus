@@ -238,11 +238,30 @@ def imprimir_os_pdf(os_: OrdemServico, caminho: str | Path) -> Path:
     destino.parent.mkdir(parents=True, exist_ok=True)
     html_str = _construir_html(os_)
 
-    with destino.open("wb") as f:
-        resultado = pisa.CreatePDF(html_str, dest=f, encoding="utf-8")
-
-    if resultado.err:
-        raise RuntimeError(
-            f"Falha ao gerar PDF da OS {os_.numero}: erro do conversor."
-        )
+    # Escrita atômica: grava num arquivo temporário no mesmo diretório
+    # (pra rename ser garantido pelo SO) e só substitui o destino se a
+    # conversão sair sem erro. Assim, se pisa.CreatePDF falhar, o PDF
+    # anterior (válido) NÃO é apagado nem corrompido.
+    import os as _os
+    import tempfile as _tempfile
+    fd, tmp_path = _tempfile.mkstemp(
+        suffix=".pdf", prefix=".tmp_", dir=str(destino.parent),
+    )
+    try:
+        with _os.fdopen(fd, "wb") as f:
+            resultado = pisa.CreatePDF(html_str, dest=f, encoding="utf-8")
+        if resultado.err:
+            raise RuntimeError(
+                f"Falha ao gerar PDF da OS {os_.numero}: erro do conversor."
+            )
+        # Sucesso — substitui atomicamente o destino
+        _os.replace(tmp_path, destino)
+        tmp_path = None  # marca como já consumido
+    finally:
+        # Se falhou em qualquer ponto antes do replace, remove o tmp
+        if tmp_path is not None:
+            try:
+                _os.unlink(tmp_path)
+            except OSError:
+                pass
     return destino
