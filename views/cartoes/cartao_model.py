@@ -656,6 +656,62 @@ def lancar_fatura_contas_pagar(cartao_id: int, mes: int, ano: int):
         """, (plano_id, f"Fatura {cartao['nome']} — {mes:02d}/{ano}", total, venc, agora))
 
 
+def prever_efeito_importacao(linhas: list[dict],
+                              criar_historico: bool = True) -> dict:
+    """Calcula um resumo do que SERIA criado no banco se as linhas fossem
+    importadas, sem tocar em nada. Usado pelo modal para mostrar o impacto
+    ao usuário antes de confirmar.
+
+    Para cada linha:
+      - 1 parcela atual (do mes_referencia)
+      - (numero - 1) parcelas históricas (se criar_historico=True)
+      - (total - numero) parcelas futuras
+
+    NÃO detecta duplicatas (exigiria query no banco). Linhas com parcela
+    no formato inválido entram em n_compras mas não somam parcelas.
+
+    Retorna dict com:
+      n_compras, n_parcelas_total, n_parcelas_historicas,
+      n_parcelas_atuais, n_parcelas_futuras, soma_atual, soma_futura
+    """
+    from views.cartoes.importar_fatura_model import parsear_parcela
+
+    n_compras = len(linhas)
+    n_hist = n_atu = n_fut = 0
+    soma_atu = soma_fut = 0.0
+
+    for linha in linhas:
+        try:
+            num, total = parsear_parcela(linha.get("parcela", "") or "1/1")
+        except ValueError:
+            continue  # linha sem parcela válida não soma
+
+        try:
+            valor = float(linha.get("valor", 0) or 0)
+        except (TypeError, ValueError):
+            valor = 0.0
+
+        n_atu += 1
+        soma_atu += valor
+
+        if criar_historico:
+            n_hist += max(0, num - 1)
+
+        futuras = max(0, total - num)
+        n_fut += futuras
+        soma_fut += valor * futuras
+
+    return {
+        "n_compras":             n_compras,
+        "n_parcelas_total":      n_hist + n_atu + n_fut,
+        "n_parcelas_historicas": n_hist,
+        "n_parcelas_atuais":     n_atu,
+        "n_parcelas_futuras":    n_fut,
+        "soma_atual":            round(soma_atu, 2),
+        "soma_futura":           round(soma_fut, 2),
+    }
+
+
 def importar_compra_fatura(dados: dict) -> int | None:
     """
     Importa uma compra a partir de uma linha de fatura de cartão.

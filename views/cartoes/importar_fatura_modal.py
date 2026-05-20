@@ -238,9 +238,29 @@ class ImportarFaturaModal(ctk.CTkToplevel):
             self._btn_importar.configure(state="normal")
 
         total = sum(l.get("valor", 0) for l in linhas)
-        self._lbl_resumo.configure(
-            text=f"{len(linhas)} item(ns)  •  Total: R$ {total:.2f}"
+
+        # Preview do efeito da importação (B3): mostra parcelas que serão
+        # criadas (histórico + atuais + futuras) baseado no checkbox.
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        ef = prever_efeito_importacao(
+            linhas, criar_historico=self._var_historico.get(),
         )
+        resumo = f"{len(linhas)} item(ns)  •  Total: R$ {total:.2f}"
+        if ef["n_parcelas_total"]:
+            partes = []
+            if ef["n_parcelas_historicas"]:
+                partes.append(f"{ef['n_parcelas_historicas']} histórica(s)")
+            partes.append(f"{ef['n_parcelas_atuais']} atual(is)")
+            if ef["n_parcelas_futuras"]:
+                partes.append(
+                    f"{ef['n_parcelas_futuras']} futura(s) "
+                    f"(R$ {ef['soma_futura']:.2f})"
+                )
+            resumo += (
+                f"   →   {ef['n_parcelas_total']} parcela(s) serão criadas: "
+                + " + ".join(partes)
+            )
+        self._lbl_resumo.configure(text=resumo)
 
     # ------------------------------------------------------------------
     # Template

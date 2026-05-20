@@ -714,6 +714,80 @@ class TestGerarTemplate:
 # 7. Equivalência: import na parcela 1/N == lançamento manual
 # ===========================================================================
 
+class TestPreverEfeitoImportacao:
+    """B3 — função pura que calcula um resumo do que SERIA criado no
+    banco a partir das linhas parseadas, sem tocar em nada. Usada pelo
+    modal antes do import para o usuário entender o impacto."""
+
+    def test_lista_vazia(self):
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        r = prever_efeito_importacao([], criar_historico=True)
+        assert r["n_compras"] == 0
+        assert r["n_parcelas_total"] == 0
+
+    def test_uma_compra_avista(self):
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        linhas = [{"descricao": "X", "parcela": "1/1", "valor": 100.0}]
+        r = prever_efeito_importacao(linhas, criar_historico=True)
+        assert r["n_compras"] == 1
+        assert r["n_parcelas_atuais"] == 1
+        assert r["n_parcelas_historicas"] == 0
+        assert r["n_parcelas_futuras"] == 0
+        assert r["n_parcelas_total"] == 1
+
+    def test_parcelada_meio_com_historico(self):
+        """Parcela 3/5 + criar_historico=True: 2 hist + 1 atual + 2 fut = 5."""
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        linhas = [{"descricao": "X", "parcela": "3/5", "valor": 200.0}]
+        r = prever_efeito_importacao(linhas, criar_historico=True)
+        assert r["n_parcelas_historicas"] == 2
+        assert r["n_parcelas_atuais"] == 1
+        assert r["n_parcelas_futuras"] == 2
+        assert r["n_parcelas_total"] == 5
+
+    def test_parcelada_sem_historico(self):
+        """Parcela 3/5 + criar_historico=False: 0 hist + 1 atual + 2 fut = 3."""
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        linhas = [{"descricao": "X", "parcela": "3/5", "valor": 200.0}]
+        r = prever_efeito_importacao(linhas, criar_historico=False)
+        assert r["n_parcelas_historicas"] == 0
+        assert r["n_parcelas_atuais"] == 1
+        assert r["n_parcelas_futuras"] == 2
+
+    def test_somas_correta(self):
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        linhas = [{"descricao": "X", "parcela": "1/3", "valor": 100.0}]
+        r = prever_efeito_importacao(linhas, criar_historico=True)
+        assert r["soma_atual"] == 100.0
+        assert r["soma_futura"] == 200.0  # 2 parcelas × 100
+
+    def test_mistura_compras(self):
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        linhas = [
+            {"descricao": "A", "parcela": "1/1", "valor": 50.0},
+            {"descricao": "B", "parcela": "2/4", "valor": 25.0},
+        ]
+        r = prever_efeito_importacao(linhas, criar_historico=True)
+        # A: 1 atual; B: 1 hist + 1 atual + 2 fut
+        assert r["n_compras"] == 2
+        assert r["n_parcelas_atuais"] == 2
+        assert r["n_parcelas_historicas"] == 1
+        assert r["n_parcelas_futuras"] == 2
+        assert r["n_parcelas_total"] == 5
+
+    def test_linha_parcela_invalida_e_ignorada(self):
+        """Linha com parcela inválida não conta no resumo (parser silencia)."""
+        from views.cartoes.cartao_model import prever_efeito_importacao
+        linhas = [
+            {"descricao": "A", "parcela": "1/1",     "valor": 100.0},
+            {"descricao": "B", "parcela": "xyz/abc", "valor": 999.0},
+        ]
+        r = prever_efeito_importacao(linhas, criar_historico=True)
+        assert r["n_compras"] == 2  # conta na linhagem
+        # mas só 1 contou em parcelas
+        assert r["n_parcelas_atuais"] == 1
+
+
 class TestVencimentoExplicito:
     """B2 — importar_compra_fatura aceita data_vencimento (opcional) no
     cabeçalho da fatura. Quando passada, sobrescreve o calculo via
