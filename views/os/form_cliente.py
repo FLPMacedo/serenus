@@ -11,7 +11,13 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
-from config import get_tema
+from config import (
+    get_tema,
+    mascara_cep,
+    mascara_cpf,
+    mascara_telefone,
+    validar_email,
+)
 from database import obter_configuracao
 from views.os.cliente_model import Cliente, salvar_cliente
 
@@ -57,10 +63,13 @@ class FormClienteModal(ctk.CTkToplevel):
         self._e_nome = ctk.CTkEntry(frame, placeholder_text="Ex.: João Silva")
         self._e_nome.pack(fill="x", pady=(2, 10))
 
-        # Documento
-        self._label(frame, "CPF / CNPJ")
+        # Documento (CPF/CNPJ — opcional, com máscara de CPF)
+        self._label(frame, "CPF (opcional)")
         self._e_documento = ctk.CTkEntry(frame, placeholder_text="000.000.000-00")
         self._e_documento.pack(fill="x", pady=(2, 10))
+        self._e_documento.bind(
+            "<KeyRelease>", lambda _e: mascara_cpf(self._e_documento),
+        )
 
         # Telefone + WhatsApp lado a lado
         row_tel = ctk.CTkFrame(frame, fg_color="transparent")
@@ -71,12 +80,25 @@ class FormClienteModal(ctk.CTkToplevel):
         self._label(c1, "Telefone / Celular")
         self._e_telefone = ctk.CTkEntry(c1, placeholder_text="(31) 99999-0000")
         self._e_telefone.pack(fill="x", pady=(2, 0))
+        self._e_telefone.bind("<KeyRelease>", self._on_telefone_keyrelease)
 
         c2 = ctk.CTkFrame(row_tel, fg_color="transparent")
         c2.pack(side="left", expand=True, fill="x", padx=(6, 0))
         self._label(c2, "WhatsApp")
         self._e_whatsapp = ctk.CTkEntry(c2, placeholder_text="(31) 99999-0000")
         self._e_whatsapp.pack(fill="x", pady=(2, 0))
+        self._e_whatsapp.bind(
+            "<KeyRelease>", lambda _e: mascara_telefone(self._e_whatsapp),
+        )
+
+        # Checkbox "WhatsApp = mesmo do telefone"
+        self._var_wpp_igual_tel = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            frame, text="WhatsApp é o mesmo do telefone",
+            variable=self._var_wpp_igual_tel,
+            command=self._on_toggle_wpp_igual_tel,
+            font=ctk.CTkFont(size=11),
+        ).pack(anchor="w", pady=(0, 8))
 
         # E-mail
         self._label(frame, "E-mail")
@@ -92,6 +114,9 @@ class FormClienteModal(ctk.CTkToplevel):
         self._label(c_cep, "CEP")
         self._e_cep = ctk.CTkEntry(c_cep, width=120, placeholder_text="00000-000")
         self._e_cep.pack(pady=(2, 0))
+        self._e_cep.bind(
+            "<KeyRelease>", lambda _e: mascara_cep(self._e_cep),
+        )
 
         c_end = ctk.CTkFrame(row_end, fg_color="transparent")
         c_end.pack(side="left", expand=True, fill="x", padx=(6, 0))
@@ -130,6 +155,28 @@ class FormClienteModal(ctk.CTkToplevel):
         ).pack(side="left", padx=6)
 
     # ------------------------------------------------------------------
+    # Handlers de máscara / interação
+    # ------------------------------------------------------------------
+
+    def _on_telefone_keyrelease(self, _ev=None):
+        """Aplica máscara no telefone; se 'WhatsApp = mesmo' está marcado,
+        espelha o valor no campo de WhatsApp."""
+        mascara_telefone(self._e_telefone)
+        if self._var_wpp_igual_tel.get():
+            self._e_whatsapp.delete(0, "end")
+            self._e_whatsapp.insert(0, self._e_telefone.get())
+
+    def _on_toggle_wpp_igual_tel(self):
+        """Quando o checkbox é marcado, copia o telefone pro WhatsApp e
+        desabilita o campo de WhatsApp. Quando desmarcado, reabilita."""
+        if self._var_wpp_igual_tel.get():
+            self._e_whatsapp.delete(0, "end")
+            self._e_whatsapp.insert(0, self._e_telefone.get())
+            self._e_whatsapp.configure(state="disabled")
+        else:
+            self._e_whatsapp.configure(state="normal")
+
+    # ------------------------------------------------------------------
     def _preencher(self, c: Cliente):
         self._e_nome.insert(0, c.nome)
         self._e_documento.insert(0, c.documento)
@@ -140,6 +187,18 @@ class FormClienteModal(ctk.CTkToplevel):
         self._e_endereco.insert(0, c.endereco)
         self._t_observacao.insert("1.0", c.observacao)
 
+        # Re-aplica máscaras pra normalizar valores vindos de cadastros antigos
+        mascara_cpf(self._e_documento)
+        mascara_telefone(self._e_telefone)
+        mascara_telefone(self._e_whatsapp)
+        mascara_cep(self._e_cep)
+
+        # Se WhatsApp == telefone, marca o checkbox e desabilita o campo
+        if (c.telefone and c.whatsapp
+                and self._e_telefone.get() == self._e_whatsapp.get()):
+            self._var_wpp_igual_tel.set(True)
+            self._e_whatsapp.configure(state="disabled")
+
     # ------------------------------------------------------------------
     def _salvar(self):
         self._lbl_erro.configure(text="")
@@ -148,12 +207,20 @@ class FormClienteModal(ctk.CTkToplevel):
             self._lbl_erro.configure(text="Nome/empresa é obrigatório.")
             return
 
+        # E-mail é opcional, mas se preenchido tem que ser válido
+        email = self._e_email.get().strip()
+        if email and not validar_email(email):
+            self._lbl_erro.configure(
+                text="E-mail inválido — use formato exemplo@dominio.com."
+            )
+            return
+
         dados = {
             "nome":       nome,
             "documento":  self._e_documento.get().strip(),
             "telefone":   self._e_telefone.get().strip(),
             "whatsapp":   self._e_whatsapp.get().strip(),
-            "email":      self._e_email.get().strip(),
+            "email":      email,
             "cep":        self._e_cep.get().strip(),
             "endereco":   self._e_endereco.get().strip(),
             "observacao": self._t_observacao.get("1.0", "end").strip(),

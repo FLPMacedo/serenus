@@ -258,6 +258,118 @@ def parsear_data(data_br: str) -> str:
         return ""
 
 
+# ---------------------------------------------------------------------------
+# Máscaras de cadastro (CPF, telefone, CEP) e validação de e-mail
+# Seguem o padrão de mascara_moeda: leem .get(), normalizam, e fazem
+# delete/insert. Vincular ao evento <KeyRelease> da CTkEntry.
+# ---------------------------------------------------------------------------
+
+def _aplicar(entry, novo: str) -> None:
+    if novo != entry.get():
+        entry.delete(0, "end")
+        entry.insert(0, novo)
+
+
+def mascara_cpf(entry) -> None:
+    """Formata até 11 dígitos como '000.000.000-00'. Excesso truncado."""
+    raw = entry.get()
+    digits = "".join(c for c in raw if c.isdigit())[:11]
+    if not digits:
+        _aplicar(entry, "")
+        return
+    p = digits
+    if len(p) <= 3:
+        novo = p
+    elif len(p) <= 6:
+        novo = f"{p[:3]}.{p[3:]}"
+    elif len(p) <= 9:
+        novo = f"{p[:3]}.{p[3:6]}.{p[6:]}"
+    else:
+        novo = f"{p[:3]}.{p[3:6]}.{p[6:9]}-{p[9:]}"
+    _aplicar(entry, novo)
+
+
+def mascara_telefone(entry) -> None:
+    """Formata telefone brasileiro com DDD: 10 ou 11 dígitos.
+    Fixo: '(00) 0000-0000' · Celular: '(00) 00000-0000'.
+    Excesso (> 11 dígitos) é truncado.
+    """
+    raw = entry.get()
+    digits = "".join(c for c in raw if c.isdigit())[:11]
+    if not digits:
+        _aplicar(entry, "")
+        return
+    d = digits
+    n = len(d)
+    if n <= 2:
+        novo = f"({d}"
+    elif n <= 6:
+        novo = f"({d[:2]}) {d[2:]}"
+    elif n <= 10:
+        # Fixo: AAAA-BBBB
+        novo = f"({d[:2]}) {d[2:6]}-{d[6:]}"
+    else:
+        # Celular: 9XXXX-XXXX
+        novo = f"({d[:2]}) {d[2:7]}-{d[7:]}"
+    _aplicar(entry, novo)
+
+
+def mascara_cep(entry) -> None:
+    """Formata até 8 dígitos como '00000-000'. Excesso truncado."""
+    raw = entry.get()
+    digits = "".join(c for c in raw if c.isdigit())[:8]
+    if not digits:
+        _aplicar(entry, "")
+        return
+    if len(digits) <= 5:
+        novo = digits
+    else:
+        novo = f"{digits[:5]}-{digits[5:]}"
+    _aplicar(entry, novo)
+
+
+# Regex de email pragmática (não cobre todos os casos da RFC mas pega
+# os erros comuns: sem @, sem TLD, ponto duplo, ponto inicial/final na
+# parte do domínio, espaço).
+import re as _re
+_RE_EMAIL = _re.compile(
+    r"^[A-Za-z0-9._%+\-]+"
+    r"@"
+    r"[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?)+"
+    r"\.[A-Za-z]{2,}$"
+)
+
+
+def validar_email(email) -> bool:
+    """Retorna True se o e-mail tem formato válido (sintático).
+    None, vazio, só espaços, sem @, sem TLD etc. → False.
+    """
+    if email is None:
+        return False
+    s = email.strip()
+    if not s:
+        return False
+    # Rejeita ponto duplo em qualquer lugar
+    if ".." in s:
+        return False
+    # Regex completa pra o resto
+    # Como o regex já cobre ".com" no final via ".\.[A-Za-z]{2,}$",
+    # ele rejeita "x@y.zz" pois exige "y", depois ".algo", depois ".XX"
+    # Ajuste: aceitar o caso simples user@dominio.xx
+    if _re.match(
+        r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?"
+        r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?)*"
+        r"\.[A-Za-z]{2,}$",
+        s,
+    ):
+        # Rejeita "user@.com" (parte local seguida de ponto inicial no domínio)
+        if "@." in s:
+            return False
+        return True
+    return False
+
+
 if __name__ == "__main__":
     t = get_tema("claro")
     print("Tema claro:")
