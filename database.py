@@ -317,6 +317,18 @@ def inicializar_banco():
             valor_novo      TEXT,
             alterado_em     TEXT    NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS itens_estoque (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome            TEXT    NOT NULL,
+            categoria       TEXT    DEFAULT '',
+            unidade         TEXT    DEFAULT '',
+            estoque_atual   REAL    NOT NULL DEFAULT 0,
+            estoque_minimo  REAL    NOT NULL DEFAULT 0,
+            observacao      TEXT    DEFAULT '',
+            ativo           INTEGER NOT NULL DEFAULT 1,
+            criado_em       TEXT    NOT NULL
+        );
     """)
 
     conn.commit()
@@ -324,6 +336,7 @@ def inicializar_banco():
     _migrar_fontes_receita(conn)
     _migrar_tabelas_vendas(conn)
     _migrar_tabelas_os(conn)
+    _migrar_tabelas_casa(conn)
     _migrar_compras_cartao(conn)
     _popular_contas_padrao(conn)
     _popular_fontes_padrao(conn)
@@ -512,6 +525,30 @@ def _migrar_tabelas_os(conn: sqlite3.Connection):
                 valor_anterior  TEXT,
                 valor_novo      TEXT,
                 alterado_em     TEXT    NOT NULL
+            )
+        """)
+    conn.commit()
+
+
+def _migrar_tabelas_casa(conn: sqlite3.Connection):
+    """Garante que a tabela itens_estoque exista em bancos pré-existentes."""
+    tabelas = {
+        row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    if "itens_estoque" not in tabelas:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS itens_estoque (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome            TEXT    NOT NULL,
+                categoria       TEXT    DEFAULT '',
+                unidade         TEXT    DEFAULT '',
+                estoque_atual   REAL    NOT NULL DEFAULT 0,
+                estoque_minimo  REAL    NOT NULL DEFAULT 0,
+                observacao      TEXT    DEFAULT '',
+                ativo           INTEGER NOT NULL DEFAULT 1,
+                criado_em       TEXT    NOT NULL
             )
         """)
     conn.commit()
@@ -787,6 +824,7 @@ def zerar_dados():
             DELETE FROM itens_os;
             DELETE FROM ordens_servico;
             DELETE FROM clientes;
+            DELETE FROM itens_estoque;
             DELETE FROM produtos;
         """)
         conn.execute("""
