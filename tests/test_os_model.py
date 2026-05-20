@@ -521,6 +521,65 @@ class TestImprimirOS:
         from pathlib import Path as _P
         assert _P(destino).exists()
 
+    def test_b_imprimir_os_falha_preserva_pdf_anterior(self, banco, tmp_path,
+                                                        monkeypatch):
+        """Bug B: se pisa.CreatePDF falhar, o arquivo de destino anterior
+        (válido) NÃO pode ser apagado/truncado. Solução: escrever em tmp
+        e renomear só no sucesso."""
+        from views.os.imprimir_os import imprimir_os_pdf
+        from views.os.os_model import obter_os, salvar_os
+
+        oid = salvar_os(_dados_os(), [_item("Mat", 1.0, 50.0)])
+        os_obj = obter_os(oid)
+
+        # Gera PDF válido primeiro
+        destino = tmp_path / "os_existente.pdf"
+        imprimir_os_pdf(os_obj, destino)
+        assert destino.exists()
+        bytes_originais = destino.read_bytes()
+        assert len(bytes_originais) > 100
+
+        # Monkeypatch pra simular falha
+        from xhtml2pdf import pisa as pisa_real
+
+        class _FakeResult:
+            err = 1
+
+        def _fake(html, dest, encoding=None):
+            try:
+                dest.write(b"lixo parcial")
+            except Exception:
+                pass
+            return _FakeResult()
+
+        monkeypatch.setattr(pisa_real, "CreatePDF", _fake)
+
+        with pytest.raises(RuntimeError):
+            imprimir_os_pdf(os_obj, destino)
+
+        # Arquivo anterior NÃO pode ter sido sobrescrito
+        assert destino.exists(), "PDF anterior foi apagado!"
+        assert destino.read_bytes() == bytes_originais, \
+            "PDF anterior foi sobrescrito por lixo"
+
+    def test_a_form_os_validacoes_negativos_no_model(self, banco):
+        """Bug A: o model salvar_os/atualizar_os não rejeitava valor_hora,
+        horas_trabalhadas ou preco_unit de itens negativos. Defesa em
+        profundidade — UI também deve validar, mas model é o gatekeeper."""
+        from views.os.os_model import salvar_os, obter_os
+        # valor_hora negativo
+        with pytest.raises(ValueError):
+            salvar_os({**_dados_os(), "valor_hora": -100.0}, [])
+        # horas_trabalhadas negativo
+        with pytest.raises(ValueError):
+            salvar_os({**_dados_os(), "horas_trabalhadas": -2.0}, [])
+        # preco_unit negativo num item
+        with pytest.raises(ValueError):
+            salvar_os(_dados_os(), [{
+                "produto_id": None, "descricao": "X",
+                "quantidade": 1.0, "preco_unit": -50.0, "observacao": "",
+            }])
+
     def test_atualizar_os_atomico_historico_consistente_com_dados(self, banco):
         """atualizar_os deve ler o estado e fazer UPDATE na mesma conexão —
         senão entre o obter_os e o UPDATE outro processo pode alterar."""

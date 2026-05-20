@@ -176,9 +176,23 @@ def _registrar_alteracao(conn, os_id: int, campo: str,
 
 
 def _persistir_itens(conn, os_id: int, itens: list[dict], agora: str) -> None:
-    """Insere a lista de itens da OS, calculando subtotal."""
+    """Insere a lista de itens da OS, calculando subtotal.
+
+    Rejeita preco_unit < 0 e quantidade <= 0 (defesa em profundidade —
+    UI também valida, mas model é o gatekeeper).
+    """
     for it in itens:
-        subtotal = round(float(it["quantidade"]) * float(it["preco_unit"]), 2)
+        quantidade = float(it["quantidade"])
+        preco_unit = float(it["preco_unit"])
+        if preco_unit < 0:
+            raise ValueError(
+                f"Preço unitário não pode ser negativo (item '{it.get('descricao', '?')}')."
+            )
+        if quantidade <= 0:
+            raise ValueError(
+                f"Quantidade deve ser maior que zero (item '{it.get('descricao', '?')}')."
+            )
+        subtotal = round(quantidade * preco_unit, 2)
         conn.execute(
             """INSERT INTO itens_os
                (os_id, produto_id, descricao, quantidade,
@@ -219,8 +233,19 @@ def proximo_numero_os() -> str:
 # CRUD
 # ---------------------------------------------------------------------------
 
+def _validar_dados_os(dados: dict) -> None:
+    """Valida valor_hora e horas_trabalhadas (>= 0). Levanta ValueError."""
+    vh = float(dados.get("valor_hora", 0.0) or 0.0)
+    ht = float(dados.get("horas_trabalhadas", 0.0) or 0.0)
+    if vh < 0:
+        raise ValueError(f"Valor por hora não pode ser negativo (recebido: {vh}).")
+    if ht < 0:
+        raise ValueError(f"Horas trabalhadas não pode ser negativo (recebido: {ht}).")
+
+
 def salvar_os(dados: dict, itens: list[dict]) -> int:
     """Cria uma nova OS com seus itens, gera numero e registra histórico."""
+    _validar_dados_os(dados)
     agora  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     numero = proximo_numero_os()
 
@@ -261,19 +286,41 @@ def salvar_os(dados: dict, itens: list[dict]) -> int:
     return os_id
 
 
+def _obter_os_em_conn(conn, id: int) -> "OrdemServico | None":
+    """Versão interna de obter_os que reusa uma conexão já aberta —
+    permite atomicidade quando combinada com UPDATE/INSERT na mesma transação."""
+    row = conn.execute(
+        "SELECT * FROM ordens_servico WHERE id=?", (id,)
+    ).fetchone()
+    if row is None:
+        return None
+    os_obj = _row_to_os(row)
+    itens_rows = conn.execute(
+        "SELECT * FROM itens_os WHERE os_id=? ORDER BY id", (id,)
+    ).fetchall()
+    os_obj.itens = [_row_to_item_os(r) for r in itens_rows]
+    return os_obj
+
+
 def atualizar_os(id: int, dados: dict, itens: list[dict]) -> None:
     """Atualiza campos da OS, substitui itens e registra diffs no histórico.
 
     Itens são substituídos via delete + insert (mais simples e atômico).
     Mudanças nos campos rastreados geram entradas em os_historico; campos
     sem alteração são ignorados.
+
+    Toda a operação roda em uma única conexão SQLite — o SELECT (snapshot
+    atual), o cálculo de diffs, o UPDATE dos campos e o DELETE+INSERT dos
+    itens compartilham a mesma transação, garantindo atomicidade.
     """
+    _validar_dados_os(dados)
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    atual = obter_os(id)
-    if atual is None:
-        return
 
     with conectar() as conn:
+        atual = _obter_os_em_conn(conn, id)
+        if atual is None:
+            return
+
         for campo in _CAMPOS_RASTREADOS_OS:
             valor_anterior = getattr(atual, campo)
             valor_novo     = dados.get(campo, valor_anterior)

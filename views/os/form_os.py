@@ -559,6 +559,17 @@ class FormOSModal(ctk.CTkToplevel):
             )
             return
 
+        # Valida valor_hora / horas trabalhadas (defesa em profundidade — model
+        # também rejeita, mas mostrar no form é melhor UX que crash em runtime)
+        vh = _parse_valor(self._e_valor_hora.get())
+        if vh < 0:
+            self._lbl_erro.configure(text="Valor por hora não pode ser negativo.")
+            return
+        ht = _parse_horas(self._e_horas.get())
+        if ht < 0:
+            self._lbl_erro.configure(text="Horas trabalhadas não pode ser negativo.")
+            return
+
         data_iso = parsear_data(self._e_data_solic.get().strip())
         if not data_iso:
             self._lbl_erro.configure(
