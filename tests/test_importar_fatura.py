@@ -788,6 +788,27 @@ class TestPreverEfeitoImportacao:
         assert r["n_parcelas_atuais"] == 1
 
 
+class TestSalvarCompraTotalZero:
+    """Bug F: salvar_compra_com_parcelas e similares dividem por total_parcelas
+    sem checar se é zero — ZeroDivisionError silencioso."""
+
+    def test_salvar_compra_total_zero_recusa(self, banco):
+        from views.cartoes.cartao_model import (
+            salvar_cartao, salvar_compra_com_parcelas,
+        )
+        cid = salvar_cartao({
+            "nome": "C", "banco": "outro", "bandeira": "visa",
+            "limite": 1000, "limite_disponivel": 1000,
+            "dia_vencimento": 10, "dia_fechamento": 5,
+        })
+        with pytest.raises(ValueError):
+            salvar_compra_com_parcelas({
+                "cartao_id": cid, "descricao": "Bug F",
+                "valor_total": 300.0, "total_parcelas": 0,
+                "mes_inicio": "2026-05",
+            })
+
+
 class TestVencimentoExplicito:
     """B2 — importar_compra_fatura aceita data_vencimento (opcional) no
     cabeçalho da fatura. Quando passada, sobrescreve o calculo via

@@ -143,14 +143,23 @@ def buscar_clientes(texto: str | None) -> list[Cliente]:
     """Busca em nome, documento e email. Case-insensitive (LIKE).
 
     Texto vazio ou None retorna todos os clientes (mesmo que listar_clientes).
+    Escapa os wildcards LIKE (% e _) do texto digitado pra que sejam tratados
+    como caracteres literais.
     """
     if not texto:
         return listar_clientes()
-    alvo = f"%{texto.lower()}%"
+    # Escapa wildcards do LIKE: \, %, _
+    escapado = (texto.lower()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_"))
+    alvo = f"%{escapado}%"
     with conectar() as conn:
         rows = conn.execute(
             "SELECT * FROM clientes WHERE"
-            " LOWER(nome) LIKE ? OR LOWER(documento) LIKE ? OR LOWER(email) LIKE ?"
+            " (LOWER(nome)      LIKE ? ESCAPE '\\'"
+            " OR LOWER(documento) LIKE ? ESCAPE '\\'"
+            " OR LOWER(email)     LIKE ? ESCAPE '\\')"
             " ORDER BY nome COLLATE NOCASE",
             (alvo, alvo, alvo),
         ).fetchall()

@@ -333,6 +333,10 @@ def salvar_compra_com_parcelas(dados: dict) -> dict:
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     total = round(float(dados["valor_total"]), 2)
     n = int(dados["total_parcelas"])
+    if n <= 0:
+        raise ValueError(
+            f"total_parcelas deve ser >= 1 (recebido: {n})."
+        )
     parcela_base = round(total / n, 2)
     ultima_parcela = round(total - parcela_base * (n - 1), 2)
 
@@ -568,6 +572,10 @@ def registrar_compra_parcelas(dados: dict) -> int:
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     total = round(float(dados["valor_total"]), 2)
     n = int(dados["total_parcelas"])
+    if n <= 0:
+        raise ValueError(
+            f"total_parcelas deve ser >= 1 (recebido: {n})."
+        )
     parcela_base = round(total / n, 2)
     ultima_parcela = round(total - parcela_base * (n - 1), 2)
     cartao_id = dados["cartao_id"]

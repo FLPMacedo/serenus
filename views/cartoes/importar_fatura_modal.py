@@ -111,13 +111,15 @@ class ImportarFaturaModal(ctk.CTkToplevel):
             font=ctk.CTkFont(size=10),
         ).grid(row=row_venc, column=2, sticky="w", padx=8, pady=(8, 0))
 
-        # Checkbox criar histórico
+        # Checkbox criar histórico — ao mudar, recalcula o preview de parcelas
         self._var_historico = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(ctrl,
                         text="Criar histórico das parcelas já pagas",
                         variable=self._var_historico,
                         font=ctk.CTkFont(size=12),
-                        text_color=cores["texto"]).grid(row=row_offset, column=2, padx=16)
+                        text_color=cores["texto"],
+                        command=self._atualizar_resumo).grid(
+            row=row_offset, column=2, padx=16)
 
         # Botões de arquivo
         btns = ctk.CTkFrame(self, fg_color="transparent")
@@ -237,15 +239,23 @@ class ImportarFaturaModal(ctk.CTkToplevel):
             self._lbl_erros.configure(text="")
             self._btn_importar.configure(state="normal")
 
-        total = sum(l.get("valor", 0) for l in linhas)
+        self._atualizar_resumo()
 
-        # Preview do efeito da importação (B3): mostra parcelas que serão
-        # criadas (histórico + atuais + futuras) baseado no checkbox.
+    # ------------------------------------------------------------------
+    # Resumo / preview do efeito da importação
+    # ------------------------------------------------------------------
+
+    def _atualizar_resumo(self):
+        """Recalcula o sumário (parcelas que serão criadas) sem reler o
+        arquivo. Chamado após cada toggle do checkbox 'Criar histórico'."""
+        if not self._linhas:
+            return
         from views.cartoes.cartao_model import prever_efeito_importacao
+        total = sum(l.get("valor", 0) for l in self._linhas)
         ef = prever_efeito_importacao(
-            linhas, criar_historico=self._var_historico.get(),
+            self._linhas, criar_historico=self._var_historico.get(),
         )
-        resumo = f"{len(linhas)} item(ns)  •  Total: R$ {total:.2f}"
+        resumo = f"{len(self._linhas)} item(ns)  •  Total: R$ {total:.2f}"
         if ef["n_parcelas_total"]:
             partes = []
             if ef["n_parcelas_historicas"]:

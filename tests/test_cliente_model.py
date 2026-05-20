@@ -281,6 +281,28 @@ class TestBuscaCliente:
         # busca por domínio do email
         assert len(buscar_clientes("empresa.com")) == 1
 
+    def test_h_busca_escapa_underscore_wildcard(self, banco):
+        """Bug H: busca não escapava _ do LIKE — caractere underscore vira
+        'qualquer 1 caractere'. Ex: 'A_B' (literal) matcha 'AxB', 'A0B' etc."""
+        from views.os.cliente_model import buscar_clientes, salvar_cliente
+        salvar_cliente(_dados_cli("AxB Confuso"))  # A + x + B = matcharia A_B
+        salvar_cliente(_dados_cli("A_B Literal"))  # contém literalmente A_B
+        # Buscar literalmente 'A_B' deve trazer SÓ o 'A_B Literal'
+        resultados = buscar_clientes("A_B")
+        nomes = sorted(c.nome for c in resultados)
+        assert nomes == ["A_B Literal"], \
+            f"underscore virou wildcard: {nomes}"
+
+    def test_h_busca_escapa_percent(self, banco):
+        """Bug H: busca não escapava % do LIKE — vira 'qualquer sequência'."""
+        from views.os.cliente_model import buscar_clientes, salvar_cliente
+        salvar_cliente(_dados_cli("Loja XPTO"))
+        salvar_cliente(_dados_cli("Maria 50%"))
+        # Busca por '50%' literal deve trazer só 'Maria 50%'
+        resultados = buscar_clientes("50%")
+        assert len(resultados) == 1
+        assert resultados[0].nome == "Maria 50%"
+
 
 # ---------------------------------------------------------------------------
 # A3 — Integração com os_model (cliente_id em salvar/atualizar/listar/obter)
