@@ -129,6 +129,7 @@ class MainWindow(ctk.CTk):
             ("🔄",  "Fluxo de Caixa",  "fluxo_caixa"),
             ("📈",  "Investimentos",   "investimentos"),
             ("🎯",  "Metas",           "metas"),
+            ("🏠",  "Compras de Casa", "compras_casa"),
             ("💾",  "Backup",          "backup"),
             ("⚙️",  "Configurações",   "configuracoes"),
         ]
@@ -229,6 +230,7 @@ class MainWindow(ctk.CTk):
         from views.vendas.vendas_view import VendasView
         from views.os.os_view import OrdensServicoView
         from views.os.clientes_view import ClientesView
+        from views.compras_casa.casa_view import ComprasCasaView
 
         mapa = {
             "dashboard":      lambda p: FluxoCaixaView(p, modo_inicio=True),
@@ -246,6 +248,7 @@ class MainWindow(ctk.CTk):
             "vendas":         lambda p: VendasView(p),
             "os":             lambda p: OrdensServicoView(p),
             "clientes":       lambda p: ClientesView(p),
+            "compras_casa":   lambda p: ComprasCasaView(p),
         }
 
         if chave in mapa:
