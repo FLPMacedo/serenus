@@ -67,6 +67,10 @@ class FormOSModal(ctk.CTkToplevel):
         self._cores    = get_tema(obter_configuracao("tema", "claro"))
         self._os_id    = os_id
         self._produtos = listar_produtos(apenas_ativos=True)
+        # Cliente atual selecionado no dropdown (None = sem cliente cadastrado)
+        from views.os.cliente_model import listar_clientes
+        self._clientes = listar_clientes()
+        self._cliente_id_atual: int | None = None
         self._itens: list[dict] = []  # cada dict: produto_id, descricao, quantidade, preco_unit, observacao, _widgets
 
         self._os_existente = obter_os(os_id) if os_id else None
@@ -137,12 +141,48 @@ class FormOSModal(ctk.CTkToplevel):
 
         self._divisor(frame)
 
-        # --- Solicitante ---
-        ctk.CTkLabel(frame, text="Solicitante",
+        # --- Cliente cadastrado (opcional) ---
+        ctk.CTkLabel(frame, text="Cliente cadastrado",
                      font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=cores["texto"]).pack(anchor="w")
+        row_cli = ctk.CTkFrame(frame, fg_color="transparent")
+        row_cli.pack(fill="x", pady=(4, 8))
+
+        opcoes_cli = ["(sem cliente cadastrado)"] + [c.nome for c in self._clientes]
+        self._cb_cliente = ctk.CTkComboBox(
+            row_cli, values=opcoes_cli, width=320, state="readonly",
+            command=lambda _v: self._on_cliente_combo_change(),
+        )
+        self._cb_cliente.set("(sem cliente cadastrado)")
+        self._cb_cliente.pack(side="left", padx=(0, 6))
+
+        ctk.CTkButton(
+            row_cli, text="+ Novo cliente", width=130, height=28,
+            command=self._abrir_form_cliente_novo,
+        ).pack(side="left", padx=(0, 6))
+
+        self._btn_editar_cli = ctk.CTkButton(
+            row_cli, text="✏ Editar", width=80, height=28,
+            fg_color="transparent", border_width=1,
+            border_color=cores["borda"], text_color=cores["texto"],
+            command=self._abrir_form_cliente_edicao, state="disabled",
+        )
+        self._btn_editar_cli.pack(side="left")
+
+        self._divisor(frame)
+
+        # --- Solicitante (texto livre — opcional, retrocompat) ---
+        ctk.CTkLabel(frame, text="Solicitante (texto livre, opcional)",
+                     font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=cores["texto"]).pack(anchor="w")
+        ctk.CTkLabel(
+            frame,
+            text="Use se a OS é avulsa ou se ainda não cadastrou o cliente.",
+            font=ctk.CTkFont(size=10),
+            text_color=cores["texto_mudo"],
+        ).pack(anchor="w", pady=(0, 4))
         row_solic = ctk.CTkFrame(frame, fg_color="transparent")
-        row_solic.pack(fill="x", pady=(4, 8))
+        row_solic.pack(fill="x", pady=(0, 8))
 
         col1 = ctk.CTkFrame(row_solic, fg_color="transparent")
         col1.pack(side="left", expand=True, fill="x", padx=(0, 6))
@@ -415,6 +455,49 @@ class FormOSModal(ctk.CTkToplevel):
             text=f"Total: {formatar_moeda(total)}")
 
     # ------------------------------------------------------------------
+    # Cliente — handlers do combo + botões "Novo" / "Editar"
+    # ------------------------------------------------------------------
+
+    def _on_cliente_combo_change(self):
+        nome = self._cb_cliente.get()
+        if nome == "(sem cliente cadastrado)":
+            self._cliente_id_atual = None
+            self._btn_editar_cli.configure(state="disabled")
+            return
+        c = next((cl for cl in self._clientes if cl.nome == nome), None)
+        self._cliente_id_atual = c.id if c else None
+        self._btn_editar_cli.configure(
+            state="normal" if c else "disabled"
+        )
+
+    def _abrir_form_cliente_novo(self):
+        from views.os.form_cliente import FormClienteModal
+        FormClienteModal(self, on_salvo=self._on_cliente_salvo)
+
+    def _abrir_form_cliente_edicao(self):
+        from views.os.cliente_model import obter_cliente
+        from views.os.form_cliente import FormClienteModal
+        if self._cliente_id_atual is None:
+            return
+        c = obter_cliente(self._cliente_id_atual)
+        if c is None:
+            return
+        FormClienteModal(self, on_salvo=self._on_cliente_salvo, cliente=c)
+
+    def _on_cliente_salvo(self, cid: int):
+        """Callback: recarrega lista de clientes e seleciona o que acabou de
+        ser criado/editado."""
+        from views.os.cliente_model import listar_clientes
+        self._clientes = listar_clientes()
+        novos = ["(sem cliente cadastrado)"] + [c.nome for c in self._clientes]
+        self._cb_cliente.configure(values=novos)
+        c = next((cl for cl in self._clientes if cl.id == cid), None)
+        if c:
+            self._cb_cliente.set(c.nome)
+            self._cliente_id_atual = cid
+            self._btn_editar_cli.configure(state="normal")
+
+    # ------------------------------------------------------------------
     # Pré-preenchimento na edição
     # ------------------------------------------------------------------
 
@@ -424,6 +507,14 @@ class FormOSModal(ctk.CTkToplevel):
             return
 
         self._cb_status.set(_STATUS_KEY_TO_LABEL.get(o.status, "Aberta"))
+
+        # Cliente (se vinculado)
+        if o.cliente_id is not None:
+            c = next((cl for cl in self._clientes if cl.id == o.cliente_id), None)
+            if c:
+                self._cb_cliente.set(c.nome)
+                self._cliente_id_atual = c.id
+                self._btn_editar_cli.configure(state="normal")
 
         self._e_solic_nome.insert(0,  o.solicitante_nome)
         self._e_solic_setor.insert(0, o.solicitante_setor)
@@ -461,8 +552,11 @@ class FormOSModal(ctk.CTkToplevel):
         self._lbl_erro.configure(text="")
 
         nome_solic = self._e_solic_nome.get().strip()
-        if not nome_solic:
-            self._lbl_erro.configure(text="Informe o nome do solicitante.")
+        # Aceita cliente cadastrado OU solicitante texto-livre. Tem que ter algo.
+        if not self._cliente_id_atual and not nome_solic:
+            self._lbl_erro.configure(
+                text="Selecione um cliente cadastrado ou informe o nome do solicitante."
+            )
             return
 
         data_iso = parsear_data(self._e_data_solic.get().strip())
@@ -503,6 +597,7 @@ class FormOSModal(ctk.CTkToplevel):
         status_key   = _STATUS_LABEL_TO_KEY.get(status_label, "aberta")
 
         dados = {
+            "cliente_id":        self._cliente_id_atual,
             "solicitante_nome":  nome_solic,
             "solicitante_setor": self._e_solic_setor.get().strip(),
             "solicitante_ramal": self._e_solic_ramal.get().strip(),
