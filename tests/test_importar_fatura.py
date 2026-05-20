@@ -714,6 +714,102 @@ class TestGerarTemplate:
 # 7. Equivalência: import na parcela 1/N == lançamento manual
 # ===========================================================================
 
+class TestVencimentoExplicito:
+    """B2 — importar_compra_fatura aceita data_vencimento (opcional) no
+    cabeçalho da fatura. Quando passada, sobrescreve o calculo via
+    dia_vencimento do cartao para a PRIMEIRA parcela (mes_referencia)."""
+
+    def _cartao_basico(self, banco):
+        from views.cartoes.cartao_model import salvar_cartao
+        return salvar_cartao({
+            "nome": "TesteVenc", "banco": "outro", "bandeira": "visa",
+            "limite": 5000.0, "limite_disponivel": 5000.0,
+            "dia_vencimento": 10, "dia_fechamento": 5,
+        })
+
+    def test_data_vencimento_explicita_e_usada_na_parcela_atual(self, banco):
+        """Quando o cabeçalho da fatura informa vencimento (ex: 28/04),
+        a parcela do mes_referencia da importacao deve ter essa data
+        em contas_pagar (e nao o dia 10 do cartao)."""
+        from database import conectar
+        from views.cartoes.cartao_model import importar_compra_fatura
+
+        cartao_id = self._cartao_basico(banco)
+        importar_compra_fatura({
+            "cartao_id":         cartao_id,
+            "descricao":         "Compra A",
+            "numero_parcela":    1,
+            "total_parcelas":    1,
+            "valor_parcela":     100.0,
+            "mes_referencia":    "2026-04",
+            "data_vencimento":   "2026-04-28",
+            "criar_historico":   False,
+        })
+
+        with conectar() as conn:
+            row = conn.execute(
+                "SELECT data_vencimento FROM contas_pagar"
+                " WHERE descricao LIKE '%Compra A%'"
+                " ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+        assert row is not None
+        assert row["data_vencimento"] == "2026-04-28"
+
+    def test_sem_data_vencimento_continua_usando_dia_do_cartao(self, banco):
+        """Retrocompat: sem data_vencimento, comportamento atual (dia_vencimento
+        do cartao com cap pelo monthrange) continua valendo."""
+        from database import conectar
+        from views.cartoes.cartao_model import importar_compra_fatura
+
+        cartao_id = self._cartao_basico(banco)  # dia_vencimento=10
+        importar_compra_fatura({
+            "cartao_id":      cartao_id,
+            "descricao":      "Compra B",
+            "numero_parcela": 1,
+            "total_parcelas": 1,
+            "valor_parcela":  50.0,
+            "mes_referencia": "2026-04",
+            "criar_historico": False,
+        })
+
+        with conectar() as conn:
+            row = conn.execute(
+                "SELECT data_vencimento FROM contas_pagar"
+                " WHERE descricao LIKE '%Compra B%'"
+                " ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+        # Sem vencimento explicito: usa dia 10 do cartao
+        assert row["data_vencimento"] == "2026-04-10"
+
+    def test_parcelas_futuras_seguem_dia_do_cartao(self, banco):
+        """Vencimento explicito so vale para a parcela do mes_referencia.
+        Parcelas futuras continuam usando dia_vencimento do cartao."""
+        from database import conectar
+        from views.cartoes.cartao_model import importar_compra_fatura
+
+        cartao_id = self._cartao_basico(banco)  # dia=10
+        importar_compra_fatura({
+            "cartao_id":      cartao_id,
+            "descricao":      "Compra C",
+            "numero_parcela": 1,
+            "total_parcelas": 3,
+            "valor_parcela":  60.0,
+            "mes_referencia": "2026-04",
+            "data_vencimento": "2026-04-28",
+            "criar_historico": False,
+        })
+
+        with conectar() as conn:
+            datas = [r[0] for r in conn.execute(
+                "SELECT data_vencimento FROM contas_pagar"
+                " WHERE descricao LIKE '%Compra C%' ORDER BY data_vencimento"
+            ).fetchall()]
+        # 3 parcelas: 28/abr (forcada), 10/mai, 10/jun
+        assert "2026-04-28" in datas
+        assert "2026-05-10" in datas
+        assert "2026-06-10" in datas
+
+
 class TestFluxoEquivalencia:
     """
     A importação na parcela 1/N deve produzir estado idêntico ao

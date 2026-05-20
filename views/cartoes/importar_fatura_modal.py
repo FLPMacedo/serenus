@@ -95,6 +95,22 @@ class ImportarFaturaModal(ctk.CTkToplevel):
         combo_mes = ctk.CTkComboBox(ctrl, values=meses, variable=self._var_mes, width=180)
         combo_mes.grid(row=row_offset, column=1, sticky="w")
 
+        # Data de vencimento da fatura (opcional — cabeçalho do extrato)
+        row_venc = row_offset + 1
+        ctk.CTkLabel(ctrl, text="Vencimento (opcional):",
+                     text_color=cores["texto"]).grid(
+            row=row_venc, column=0, sticky="w", padx=(0, 8), pady=(8, 0))
+        self._e_vencimento = ctk.CTkEntry(
+            ctrl, width=120, placeholder_text="DD/MM/AAAA",
+        )
+        self._e_vencimento.grid(row=row_venc, column=1, sticky="w", pady=(8, 0))
+        ctk.CTkLabel(
+            ctrl,
+            text="Se vazio, usa o dia de vencimento do cartão.",
+            text_color=cores["texto_mudo"],
+            font=ctk.CTkFont(size=10),
+        ).grid(row=row_venc, column=2, sticky="w", padx=8, pady=(8, 0))
+
         # Checkbox criar histórico
         self._var_historico = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(ctrl,
@@ -278,6 +294,7 @@ class ImportarFaturaModal(ctk.CTkToplevel):
         return self._cartoes_map.get(nome)
 
     def _importar(self):
+        from config import parsear_data
         from views.cartoes.importar_fatura_model import parsear_parcela
         from views.cartoes.cartao_model import importar_compra_fatura
 
@@ -291,6 +308,19 @@ class ImportarFaturaModal(ctk.CTkToplevel):
 
         mes_ref     = self._mes_referencia_selecionado()
         criar_hist  = self._var_historico.get()
+
+        # Vencimento opcional: se preenchido, valida e usa pra forçar a data
+        # da parcela do mes_referencia em contas_pagar
+        venc_iso = None
+        venc_str = self._e_vencimento.get().strip()
+        if venc_str:
+            venc_iso = parsear_data(venc_str)
+            if not venc_iso:
+                self._lbl_erros.configure(
+                    text="Data de vencimento inválida (use DD/MM/AAAA)."
+                )
+                return
+
         importados  = 0
         duplicados  = 0
         erros_imp: list[str] = []
@@ -308,6 +338,7 @@ class ImportarFaturaModal(ctk.CTkToplevel):
                     "total_parcelas":   total_parc,
                     "valor_parcela":    linha["valor"],
                     "mes_referencia":   mes_ref,
+                    "data_vencimento":  venc_iso,
                     "criar_historico":  criar_hist,
                 }
                 resultado = importar_compra_fatura(dados)

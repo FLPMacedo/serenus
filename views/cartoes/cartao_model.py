@@ -664,7 +664,10 @@ def importar_compra_fatura(dados: dict) -> int | None:
         cartao_id, descricao, numero_parcela, total_parcelas,
         valor_parcela, mes_referencia ("YYYY-MM")
     Opcionais:
-        estabelecimento, categoria, criar_historico (bool, default True)
+        estabelecimento, categoria, criar_historico (bool, default True),
+        data_vencimento ("YYYY-MM-DD") — sobrescreve o cálculo automático
+            APENAS para a parcela do mes_referencia. Parcelas futuras
+            seguem o dia_vencimento do cartão.
 
     Retorna compra_id (int > 0) ou None se duplicata exata.
     Se total_parcelas mudou (delta), adiciona parcelas faltantes e retorna 0.
@@ -682,6 +685,9 @@ def importar_compra_fatura(dados: dict) -> int | None:
         valor_parc = round(float(getattr(vp_raw, "expected", 0.0)), 2)
     mes_ref    = str(dados["mes_referencia"])  # "YYYY-MM" — mês da parcela atual
     criar_hist = bool(dados.get("criar_historico", True))
+    # Vencimento explícito do cabeçalho da fatura (sobrescreve dia_vencimento
+    # do cartão apenas para a parcela do mes_referencia). Formato ISO.
+    venc_explicito = dados.get("data_vencimento") or None
 
     # mes_ref é o mês da parcela `numero`. Recalcula o mes_inicio (parcela 1).
     ano_ref  = int(mes_ref[:4])
@@ -759,6 +765,9 @@ def importar_compra_fatura(dados: dict) -> int | None:
 
                 dia_v        = min(dia_venc or 10, _ultimo_dia_mes(ano_r, mes_r))
                 data_venc_str = f"{ano_r:04d}-{mes_r:02d}-{dia_v:02d}"
+                # Vencimento explícito sobrescreve apenas a parcela do mes_referencia
+                if venc_explicito and ref == mes_ref:
+                    data_venc_str = venc_explicito
                 desc_cp      = f"Parcela {i+1}/{total} — {descricao}"
                 if dados.get("estabelecimento"):
                     desc_cp = f"Parcela {i+1}/{total} — {dados['estabelecimento']}"
@@ -826,6 +835,9 @@ def importar_compra_fatura(dados: dict) -> int | None:
 
             dia_v         = min(dia_venc or 10, _ultimo_dia_mes(ano_r, mes_r))
             data_venc_str = f"{ano_r:04d}-{mes_r:02d}-{dia_v:02d}"
+            # Vencimento explícito sobrescreve apenas a parcela do mes_referencia
+            if venc_explicito and ref == mes_ref:
+                data_venc_str = venc_explicito
             desc_cp       = f"Parcela {i+1}/{total} — {descricao}"
             if dados.get("estabelecimento"):
                 desc_cp = f"Parcela {i+1}/{total} — {dados['estabelecimento']}"
