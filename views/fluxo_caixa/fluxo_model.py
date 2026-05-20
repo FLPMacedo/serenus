@@ -101,12 +101,34 @@ def _despesas_fixas_mes(mes_0: int, ano: int, base: float) -> float:
 
 
 def _parcelas_mes(dividas, indice: int) -> float:
-    """Soma das parcelas de dívidas ativas para o mês `indice` a partir de hoje."""
+    """Soma das parcelas de dívidas ativas para o mês `indice` a partir de hoje.
+
+    Ignora dívidas tipo 'cartao' — essas são contadas separadamente via
+    `_parcelas_cartao_mes()` que lê direto de `parcelas_cartao` (mais preciso,
+    pois respeita o cronograma real e os status de cada parcela)."""
     total = 0.0
     for d in dividas:
+        if d.tipo == "cartao":
+            continue  # ver _parcelas_cartao_mes
         if indice < d.parcelas_restantes:
             total += d.parcela_mensal
     return total
+
+
+def _parcelas_cartao_mes(ano: int, mes_num: int) -> float:
+    """Soma das parcelas_cartao pendentes para o mês indicado.
+
+    Usa o mes_referencia (formato 'YYYY-MM') da tabela parcelas_cartao —
+    mesma estratégia de `projecao_model._parcelas_cartao_mes()`, mas
+    independente (não cria dependência cruzada entre os models)."""
+    mes_ref = f"{ano:04d}-{mes_num:02d}"
+    with conectar() as conn:
+        row = conn.execute("""
+            SELECT COALESCE(SUM(valor), 0) AS total
+            FROM   parcelas_cartao
+            WHERE  mes_referencia = ? AND status != 'cancelado'
+        """, (mes_ref,)).fetchone()
+    return float(row["total"] or 0) if row else 0.0
 
 
 def _receita_mes(fontes, especiais_por_mes: dict, mes_0: int) -> tuple[float, list]:
@@ -197,6 +219,10 @@ def projetar_fluxo(meses: int) -> list[MesFluxo]:
         receita, especiais = _receita_mes(fontes, especiais_por_mes, mes_0)
         receita    += _receitas_vendas_mes(mes_0, ano)
         parcelas    = _parcelas_mes(dividas, i)
+        # Soma das parcelas de cartão pendentes do mês (importadas ou
+        # lançadas manualmente). _parcelas_mes já ignora dívidas tipo='cartao'
+        # pra evitar duplicação.
+        parcelas   += _parcelas_cartao_mes(ano, mes_num)
         desp_fixas  = _despesas_fixas_mes(mes_0, ano, base_fixas)
         saldo       = receita - parcelas - desp_fixas
 
