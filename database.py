@@ -323,11 +323,18 @@ def inicializar_banco():
             nome            TEXT    NOT NULL,
             categoria       TEXT    DEFAULT '',
             unidade         TEXT    DEFAULT '',
+            marca           TEXT    DEFAULT '',
             estoque_atual   REAL    NOT NULL DEFAULT 0,
             estoque_minimo  REAL    NOT NULL DEFAULT 0,
             observacao      TEXT    DEFAULT '',
             ativo           INTEGER NOT NULL DEFAULT 1,
             criado_em       TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS marcas (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome      TEXT    NOT NULL UNIQUE,
+            criado_em TEXT    NOT NULL
         );
     """)
 
@@ -340,8 +347,29 @@ def inicializar_banco():
     _migrar_compras_cartao(conn)
     _popular_contas_padrao(conn)
     _popular_fontes_padrao(conn)
+    _popular_marcas_padrao(conn)
     popular_dados_exemplo(conn)
     conn.close()
+
+
+def _popular_marcas_padrao(conn: sqlite3.Connection):
+    """Insere as marcas do catálogo (docs/Lista de itens de compras.txt)
+    na 1ª execução. Idempotente via UNIQUE e flag em configuracoes."""
+    cur = conn.cursor()
+    cur.execute("SELECT valor FROM configuracoes WHERE chave='marcas_padrao_inseridas'")
+    if cur.fetchone():
+        return
+    try:
+        # Import dentro pra evitar dependência circular no boot
+        from views.compras_casa.catalogo import popular_marcas_iniciais
+        popular_marcas_iniciais()
+    except Exception:  # pragma: no cover — tolerância máxima no boot
+        return
+    conn.execute(
+        "INSERT OR REPLACE INTO configuracoes (chave, valor)"
+        " VALUES ('marcas_padrao_inseridas', 'true')"
+    )
+    conn.commit()
 
 
 def _migrar_plano_contas(conn: sqlite3.Connection):
@@ -531,7 +559,8 @@ def _migrar_tabelas_os(conn: sqlite3.Connection):
 
 
 def _migrar_tabelas_casa(conn: sqlite3.Connection):
-    """Garante que a tabela itens_estoque exista em bancos pré-existentes."""
+    """Garante que itens_estoque e marcas existam em bancos pré-existentes,
+    e adiciona a coluna `marca` em itens_estoque se faltar."""
     tabelas = {
         row[0] for row in conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
@@ -544,11 +573,29 @@ def _migrar_tabelas_casa(conn: sqlite3.Connection):
                 nome            TEXT    NOT NULL,
                 categoria       TEXT    DEFAULT '',
                 unidade         TEXT    DEFAULT '',
+                marca           TEXT    DEFAULT '',
                 estoque_atual   REAL    NOT NULL DEFAULT 0,
                 estoque_minimo  REAL    NOT NULL DEFAULT 0,
                 observacao      TEXT    DEFAULT '',
                 ativo           INTEGER NOT NULL DEFAULT 1,
                 criado_em       TEXT    NOT NULL
+            )
+        """)
+    else:
+        # Tabela já existe — verifica se a coluna marca precisa ser adicionada
+        cols = {r[1] for r in conn.execute(
+            "PRAGMA table_info(itens_estoque)"
+        ).fetchall()}
+        if "marca" not in cols:
+            conn.execute(
+                "ALTER TABLE itens_estoque ADD COLUMN marca TEXT DEFAULT ''"
+            )
+    if "marcas" not in tabelas:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS marcas (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome      TEXT    NOT NULL UNIQUE,
+                criado_em TEXT    NOT NULL
             )
         """)
     conn.commit()
@@ -825,6 +872,7 @@ def zerar_dados():
             DELETE FROM ordens_servico;
             DELETE FROM clientes;
             DELETE FROM itens_estoque;
+            DELETE FROM marcas;
             DELETE FROM produtos;
         """)
         conn.execute("""
