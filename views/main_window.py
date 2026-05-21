@@ -134,8 +134,20 @@ class MainWindow(ctk.CTk):
             ("⚙️",  "Configurações",   "configuracoes"),
         ]
 
-        frame_nav = ctk.CTkFrame(self._sidebar, fg_color="transparent")
+        # Container scrollável para os itens de navegação — garante que
+        # em telas baixas (1366x768, laptops antigos) os 16 módulos
+        # permaneçam acessíveis via scroll vertical.
+        frame_nav = ctk.CTkScrollableFrame(
+            self._sidebar, fg_color="transparent",
+            scrollbar_button_color=cores["borda"],
+            scrollbar_button_hover_color=cores["primario"],
+        )
         frame_nav.pack(fill="both", expand=True, pady=8)
+        # Largura interna do scrollable acompanha sidebar
+        try:
+            frame_nav._scrollbar.configure(width=10)
+        except Exception:
+            pass
 
         for emoji, label, chave in itens:
             btn = ctk.CTkButton(
@@ -150,7 +162,7 @@ class MainWindow(ctk.CTk):
                 font=ctk.CTkFont(size=13),
                 command=lambda c=chave: self._navegar(c),
             )
-            btn.pack(fill="x", padx=8, pady=2)
+            btn.pack(fill="x", padx=4, pady=2)
             self._botoes_nav[chave] = btn
 
         # Toggle de tema no rodapé
