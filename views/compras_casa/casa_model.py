@@ -33,6 +33,7 @@ class ItemEstoque:
     nome:            str
     categoria:       str
     unidade:         str
+    marca:           str
     estoque_atual:   float
     estoque_minimo:  float
     observacao:      str
@@ -58,12 +59,79 @@ def _row_to_item(r) -> ItemEstoque:
         nome=d["nome"],
         categoria=d.get("categoria") or "",
         unidade=d.get("unidade") or "",
+        marca=d.get("marca") or "",
         estoque_atual=float(d.get("estoque_atual") or 0),
         estoque_minimo=float(d.get("estoque_minimo") or 0),
         observacao=d.get("observacao") or "",
         ativo=bool(d.get("ativo", 1)),
         criado_em=d["criado_em"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Marcas — catalogo global (find-or-create, case-insensitive)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Marca:
+    id:        int
+    nome:      str
+    criado_em: str
+
+
+def _row_to_marca(r) -> Marca:
+    d = dict(r)
+    return Marca(id=d["id"], nome=d["nome"], criado_em=d["criado_em"])
+
+
+def salvar_marca(nome: str) -> int:
+    """Cria a marca se não existir, ou devolve o id da existente
+    (find-or-create, case-insensitive).
+
+    Retorna 0 se o nome for vazio (no-op silencioso) — caller pode
+    confiar que id>0 sempre significa marca real.
+    """
+    n = (nome or "").strip()
+    if not n:
+        return 0
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with conectar() as conn:
+        # Primeiro tenta achar (case-insensitive)
+        row = conn.execute(
+            "SELECT id FROM marcas WHERE LOWER(nome) = LOWER(?)", (n,)
+        ).fetchone()
+        if row:
+            return int(row["id"])
+        cur = conn.execute(
+            "INSERT INTO marcas (nome, criado_em) VALUES (?, ?)", (n, agora),
+        )
+        return cur.lastrowid
+
+
+def listar_marcas() -> list["Marca"]:
+    """Todas as marcas em ordem alfabética case-insensitive."""
+    with conectar() as conn:
+        rows = conn.execute(
+            "SELECT * FROM marcas ORDER BY nome COLLATE NOCASE"
+        ).fetchall()
+    return [_row_to_marca(r) for r in rows]
+
+
+def buscar_marcas(prefixo: str) -> list["Marca"]:
+    """Marcas cujo nome começa com `prefixo` (case-insensitive).
+    Útil pra autocomplete no form."""
+    p = (prefixo or "").strip().lower()
+    if not p:
+        return listar_marcas()
+    # Escapa wildcards do LIKE
+    seguro = p.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    with conectar() as conn:
+        rows = conn.execute(
+            "SELECT * FROM marcas WHERE LOWER(nome) LIKE ? ESCAPE '\\'"
+            " ORDER BY nome COLLATE NOCASE",
+            (f"{seguro}%",),
+        ).fetchall()
+    return [_row_to_marca(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -83,16 +151,22 @@ def salvar_item(dados: dict, id: int | None = None) -> int:
     if estoque_minimo < 0:
         raise ValueError("Estoque mínimo não pode ser negativo.")
 
+    marca = (dados.get("marca") or "").strip()
+    # Se a marca for nova, persiste no catálogo (find-or-create)
+    if marca:
+        salvar_marca(marca)
+
     with conectar() as conn:
         if id:
             conn.execute(
                 "UPDATE itens_estoque SET nome=?, categoria=?, unidade=?,"
-                " estoque_atual=?, estoque_minimo=?, observacao=?, ativo=?"
+                " marca=?, estoque_atual=?, estoque_minimo=?, observacao=?, ativo=?"
                 " WHERE id=?",
                 (
                     nome,
                     dados.get("categoria", ""),
                     dados.get("unidade", ""),
+                    marca,
                     estoque_atual,
                     estoque_minimo,
                     dados.get("observacao", ""),
@@ -102,13 +176,14 @@ def salvar_item(dados: dict, id: int | None = None) -> int:
             )
             return id
         cur = conn.execute(
-            "INSERT INTO itens_estoque (nome, categoria, unidade,"
+            "INSERT INTO itens_estoque (nome, categoria, unidade, marca,"
             " estoque_atual, estoque_minimo, observacao, ativo, criado_em)"
-            " VALUES (?,?,?,?,?,?,?,?)",
+            " VALUES (?,?,?,?,?,?,?,?,?)",
             (
                 nome,
                 dados.get("categoria", ""),
                 dados.get("unidade", ""),
+                marca,
                 estoque_atual,
                 estoque_minimo,
                 dados.get("observacao", ""),
