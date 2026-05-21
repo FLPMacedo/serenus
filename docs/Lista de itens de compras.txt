@@ -1,0 +1,1015 @@
+Lista de 500 itens
+1) Alimentos básicos e carboidratos
+Arroz branco tipo 1 — marcas: Camil, Tio João, Prato Fino.
+
+Arroz parboilizado — Camil, Tio João, Namorado.
+
+Arroz integral — Camil, Tio João, Blue Ville.
+
+Arroz branco 5kg — Camil, Tio João, Butuí.
+
+Feijão carioca — Kicaldo, Camil, Urbano.
+
+Feijão preto — Kicaldo, Camil, Meu Biju.
+
+Feijão vermelho — Camil, Kicaldo, Caldo Bom.
+
+Feijão fradinho — Camil, Yoki, Kicaldo.
+
+Feijão branco — Camil, Kicaldo, Caldo Bom.
+
+Lentilha — Yoki, Camil, Kisabor.
+
+Grão-de-bico — Yoki, Camil, Vapza.
+
+Ervilha seca — Yoki, Camil, Quero.
+
+Farinha de trigo tradicional — Dona Benta, Renata, Rosa Branca.
+
+Farinha de trigo com fermento — Dona Benta, Renata, Globo.
+
+Farinha de mandioca branca — Yoki, Amafil, Kisabor.
+
+Farinha de mandioca torrada — Yoki, Amafil, Pinduca.
+
+Farinha de milho — Yoki, Sinhá, Zaeli.
+
+Fubá mimoso — Yoki, Sinhá, Zaeli.
+
+Flocão de milho — Sinhá, Maratá, Vitamilho.
+
+Cuscuz de milho — Sinhá, Maratá, Vitamilho.
+
+Tapioca granulada — Yoki, Amafil, Da Terrinha.
+
+Goma para tapioca — Amafil, Da Terrinha, Rocha.
+
+Polvilho doce — Amafil, Yoki, Kisabor.
+
+Polvilho azedo — Amafil, Yoki, Kisabor.
+
+Macarrão espaguete — Barilla, Renata, Adria.
+
+Macarrão parafuso — Renata, Adria, Barilla.
+
+Macarrão penne — Barilla, Renata, Adria.
+
+Macarrão talharim — Renata, Adria, Barilla.
+
+Macarrão ninho — Renata, Adria, Pilar.
+
+Macarrão integral — Barilla, Renata, Adria.
+
+Macarrão sem glúten — Urbano, Renata, Barilla.
+
+Miojo / macarrão instantâneo — Nissin, Renata, Lamen.
+
+Lasanha seca — Renata, Adria, Barilla.
+
+Massa para pastel — Arosa, Massa Leve, Mezzani.
+
+Massa para lasanha fresca — Arosa, Massa Leve, Mezzani.
+
+Massa de pizza pronta — Massa Leve, Arosa, Mezzani.
+
+Pão francês — padaria/local.
+
+Pão de forma tradicional — Panco, Wickbold, Pullman.
+
+Pão integral — Wickbold, Pullman, Seven Boys.
+
+Pão de hambúrguer — Pullman, Seven Boys, Panco.
+
+Pão de hot dog — Pullman, Seven Boys, Panco.
+
+Torrada — Bauducco, Adria, Marilan.
+
+Biscoito água e sal — Marilan, Adria, M. Dias Branco.
+
+Biscoito cream cracker — Marilan, Adria, Vitarella.
+
+Biscoito maizena — Marilan, Adria, Vitarella.
+
+Biscoito recheado — Oreo, Trakinas, Passatempo.
+
+Biscoito wafer — Bauducco, Piraquê, Nestlé.
+
+Cookie — Bauducco, Toddy, Marilan.
+
+Rosquinha doce — Mabel, Marilan, Panco.
+
+Rosquinha de coco — Mabel, Marilan, Panco.
+
+Batata inglesa — hortifruti.
+
+Batata-doce — hortifruti.
+
+Mandioca / aipim — hortifruti.
+
+Inhame — hortifruti.
+
+Cará — hortifruti.
+
+Mandioquinha — hortifruti.
+
+Milho verde espiga — hortifruti.
+
+Aveia em flocos — Quaker, Nestlé, Yoki.
+
+Aveia farinha — Quaker, Nestlé, Yoki.
+
+Granola — Jasmine, Mãe Terra, Nestlé.
+
+2) Proteínas
+Carne bovina acém — Friboi, Swift, marca do açougue.
+
+Carne bovina patinho — Friboi, Swift, Montana.
+
+Carne bovina coxão mole — Friboi, Swift, Montana.
+
+Carne bovina coxão duro — Friboi, Swift, Montana.
+
+Carne bovina músculo — Friboi, Frisa, local.
+
+Carne bovina paleta — Friboi, Swift, local.
+
+Carne moída bovina — Friboi, Swift, local.
+
+Contra-filé — Friboi, Swift, Montana.
+
+Alcatra — Friboi, Swift, Montana.
+
+Picanha — Friboi, Swift, Maturatta.
+
+Costela bovina — Friboi, Swift, local.
+
+Fígado bovino — local / frigorífico regional.
+
+Frango inteiro congelado — Sadia, Seara, Perdigão.
+
+Peito de frango — Sadia, Seara, Perdigão.
+
+Filé de peito de frango — Sadia, Seara, Perdigão.
+
+Coxa de frango — Sadia, Seara, Perdigão.
+
+Sobrecoxa de frango — Sadia, Seara, Perdigão.
+
+Asa de frango — Sadia, Seara, Perdigão.
+
+Meio da asa — Sadia, Seara, Perdigão.
+
+Sassami — Sadia, Seara, Perdigão.
+
+Linguiça de frango — Sadia, Seara, Perdigão.
+
+Nuggets — Sadia, Seara, Perdigão.
+
+Hambúrguer bovino congelado — Seara, Sadia, Perdigão.
+
+Hambúrguer de frango — Seara, Sadia, Perdigão.
+
+Ovo branco dúzia — Mantiqueira, Korin, Qualitá.
+
+Ovo vermelho dúzia — Mantiqueira, Korin, Qualitá.
+
+Ovo caipira — Mantiqueira, Korin, local.
+
+Pernil suíno — Seara, Sadia, Aurora.
+
+Lombo suíno — Sadia, Seara, Aurora.
+
+Costelinha suína — Sadia, Seara, Aurora.
+
+Bisteca suína — Sadia, Seara, Aurora.
+
+Bacon — Sadia, Seara, Perdigão.
+
+Calabresa — Seara, Sadia, Perdigão.
+
+Linguiça toscana — Seara, Sadia, Perdigão.
+
+Salsicha — Seara, Sadia, Perdigão.
+
+Mortadela — Perdigão, Sadia, Seara.
+
+Presunto cozido — Sadia, Perdigão, Seara.
+
+Peito de peru — Sadia, Perdigão, Seara.
+
+Apresuntado — Sadia, Perdigão, Seara.
+
+Salame — Sadia, Seara, Ceratti.
+
+Atum em lata — Gomes da Costa, Coqueiro, Pescador.
+
+Sardinha em lata — Gomes da Costa, Coqueiro, Robinson Crusoe.
+
+Peixe enlatado — Gomes da Costa, Coqueiro.
+
+Filé de tilápia congelado — Copacol, C.Vale, local.
+
+Filé de merluza congelado — Costa Sul, Frescatto, local.
+
+Camarão congelado — Costa Sul, local, Frescatto.
+
+Empanado de frango — Sadia, Seara, Perdigão.
+
+Almôndega congelada — Sadia, Seara, Perdigão.
+
+Kibe congelado — Sadia, Seara, local.
+
+Proteína de soja texturizada — Camil, Sora, Jasmine.
+
+3) Gorduras, óleos e básicos de preparo
+Óleo de soja — Liza, Soya, Corcovado.
+
+Óleo de milho — Liza, Salada, Sinhá.
+
+Óleo de girassol — Liza, Salada, Soya.
+
+Azeite de oliva extra virgem — Gallo, Andorinha, Cocinero.
+
+Azeite tradicional — Gallo, Andorinha, Borges.
+
+Margarina cremosa — Qualy, Delícia, Claybom.
+
+Margarina light — Qualy, Becel, Delícia.
+
+Manteiga com sal — Aviação, Itambé, Président.
+
+Manteiga sem sal — Aviação, Itambé, Président.
+
+Requeijão cremoso — Vigor, Catupiry, Itambé.
+
+Creme de leite — Nestlé, Piracanjuba, Italac.
+
+Leite de coco — Sococo, Ducoco, Menina.
+
+Maionese — Hellmann’s, Heinz, Arisco.
+
+Molho para salada — Liza, Hellmann’s, Cargill.
+
+Banha suína — Sadia, Perdigão, local.
+
+4) Lácteos e frios
+Leite longa vida integral — Italac, Piracanjuba, Itambé.
+
+Leite longa vida desnatado — Piracanjuba, Italac, Itambé.
+
+Leite longa vida semidesnatado — Piracanjuba, Italac, Itambé.
+
+Leite zero lactose — Piracanjuba, Italac, Itambé.
+
+Leite em pó integral — Ninho, Italac, Piracanjuba.
+
+Leite em pó desnatado — Molico, Piracanjuba, Itambé.
+
+Leite condensado — Moça, Piracanjuba, Italac.
+
+Iogurte natural — Danone, Vigor, Nestlé.
+
+Iogurte de morango — Danone, Vigor, Itambé.
+
+Iogurte líquido — Danone, Vigor, Itambé.
+
+Iogurte grego — Vigor, Nestlé, Danone.
+
+Petit suisse — Danoninho, Chambinho, Vigorzinho.
+
+Bebida láctea — Itambé, Vigor, Piracanjuba.
+
+Queijo mussarela — Tirolez, Itambé, Président.
+
+Queijo prato — Tirolez, Itambé, Polenghi.
+
+Queijo minas frescal — Tirolez, Itambé, local.
+
+Queijo parmesão ralado — Vigor, Tirolez, Faixa Azul.
+
+Queijo coalho — Tirolez, Scala, local.
+
+Queijo provolone — Tirolez, Polenghi, President.
+
+Ricota — Tirolez, Polenghi, local.
+
+Cream cheese — Philadelphia, Polenghi, Danubio.
+
+Chantilly — Amélia, Piracanjuba, Nestlé.
+
+Sobremesa láctea — Danette, Chandelle, Vigor.
+
+Bebida vegetal — Ades, NotMilk, A Tal da Castanha.
+
+Manteiga ghee — Benni, Grings, local.
+
+5) Hortifruti
+Tomate — hortifruti.
+
+Cebola — hortifruti.
+
+Alho — hortifruti.
+
+Cenoura — hortifruti.
+
+Beterraba — hortifruti.
+
+Chuchu — hortifruti.
+
+Abobrinha — hortifruti.
+
+Pepino — hortifruti.
+
+Pimentão verde — hortifruti.
+
+Pimentão vermelho — hortifruti.
+
+Berinjela — hortifruti.
+
+Quiabo — hortifruti.
+
+Jiló — hortifruti.
+
+Repolho verde — hortifruti.
+
+Repolho roxo — hortifruti.
+
+Couve manteiga — hortifruti.
+
+Alface americana — hortifruti.
+
+Alface crespa — hortifruti.
+
+Rúcula — hortifruti.
+
+Agrião — hortifruti.
+
+Espinafre — hortifruti.
+
+Cheiro-verde — hortifruti.
+
+Salsinha — hortifruti.
+
+Cebolinha — hortifruti.
+
+Coentro — hortifruti.
+
+Hortelã — hortifruti.
+
+Banana prata — hortifruti.
+
+Banana nanica — hortifruti.
+
+Maçã gala — hortifruti.
+
+Maçã fuji — hortifruti.
+
+Laranja pera — hortifruti.
+
+Laranja lima — hortifruti.
+
+Limão taiti — hortifruti.
+
+Mamão formosa — hortifruti.
+
+Mamão papaia — hortifruti.
+
+Manga — hortifruti.
+
+Uva — hortifruti.
+
+Melancia — hortifruti.
+
+Melão — hortifruti.
+
+Abacaxi — hortifruti.
+
+Abacate — hortifruti.
+
+Pera — hortifruti.
+
+Goiaba — hortifruti.
+
+Morango — hortifruti.
+
+Coco seco — hortifruti.
+
+Maracujá — hortifruti.
+
+Acerola — hortifruti.
+
+Tangerina / mexerica — hortifruti.
+
+Caqui — hortifruti.
+
+Ameixa — hortifruti.
+
+6) Enlatados e conservas
+Milho verde em lata — Quero, Fugini, Predilecta.
+
+Ervilha em lata — Quero, Fugini, Predilecta.
+
+Seleta de legumes — Quero, Fugini, Predilecta.
+
+Extrato de tomate — Elefante, Quero, Fugini.
+
+Molho de tomate tradicional — Quero, Pomarola, Fugini.
+
+Molho de tomate manjericão — Quero, Pomarola, Heinz.
+
+Polpa de tomate — Elefante, Predilecta, Cargill.
+
+Purê de tomate — Quero, Elefante, Predilecta.
+
+Ketchup — Heinz, Hemmer, Quero.
+
+Mostarda — Hemmer, Heinz, Arisco.
+
+Molho barbecue — Heinz, Hemmer, Cepêra.
+
+Picles — Hemmer, Cepêra, Predilecta.
+
+Azeitona verde — Vale Fértil, Hemmer, Campo Belo.
+
+Azeitona preta — Vale Fértil, Hemmer, Campo Belo.
+
+Pepino em conserva — Hemmer, Cepêra, Predilecta.
+
+Palmito pupunha — Predilecta, Tio Paco, Vale Fértil.
+
+Cogumelo em conserva — Hemmer, Predilecta, Campo Belo.
+
+Atum ralado em óleo — Gomes da Costa, Coqueiro.
+
+Atum sólido em água — Gomes da Costa, Coqueiro.
+
+Sardinha ao molho — Gomes da Costa, Coqueiro.
+
+Sardinha em óleo — Gomes da Costa, Coqueiro.
+
+Milho para pipoca — Yoki, Kisabor, Sinhá.
+
+Pepino agridoce — Hemmer, Cepêra, Predilecta.
+
+Cebola em conserva — Hemmer, Predilecta, Cepêra.
+
+Vegetais em conserva — Predilecta, Quero, Cepêra.
+
+7) Temperos, açúcares e cozinha
+Açúcar refinado — União, Camil, Caravelas.
+
+Açúcar cristal — Delta, União, Alto Alegre.
+
+Açúcar demerara — União, Native, Jasmine.
+
+Açúcar mascavo — Native, Jasmine, União.
+
+Sal refinado — Cisne, Lebre, Marlin.
+
+Sal grosso — Cisne, Lebre, Marlin.
+
+Sal light — Cisne, Lebre, Linea.
+
+Pimenta-do-reino — Kitano, Bombay, Kisabor.
+
+Orégano — Kitano, Bombay, Kisabor.
+
+Colorau — Kitano, Kisabor, Maratá.
+
+Páprica — Kitano, Bombay, Kisabor.
+
+Cominho — Kitano, Kisabor, Bombay.
+
+Açafrão / cúrcuma — Kitano, Bombay, Kisabor.
+
+Louro — Kitano, Bombay, Kisabor.
+
+Canela em pó — Kitano, Bombay, Dr. Oetker.
+
+Cravo-da-índia — Kitano, Bombay, Dr. Oetker.
+
+Noz-moscada — Kitano, Bombay, Dr. Oetker.
+
+Tempero pronto — Sazón, Arisco, Kitano.
+
+Caldo de galinha — Knorr, Maggi, Arisco.
+
+Caldo de carne — Knorr, Maggi, Arisco.
+
+Molho shoyu — Sakura, Ajinomoto, Mitsuwa.
+
+Vinagre álcool — Castelo, Toscano, Minhoto.
+
+Vinagre de maçã — Castelo, Minhoto, Toscano.
+
+Vinagre balsâmico — Castelo, Gallo, Toscano.
+
+Fermento químico — Dr. Oetker, Royal, Dona Benta.
+
+Fermento biológico seco — Fleischmann, Dona Benta, Dr. Oetker.
+
+Gelatina em pó — Dr. Oetker, Apti, Sol.
+
+Pudim em pó — Dr. Oetker, Apti, Sol.
+
+Mistura para bolo — Dona Benta, Renata, Fleischmann.
+
+Levedo / bicarbonato — Dr. Oetker, Apti, Yoki.
+
+8) Cafés, bebidas e matinais
+Café torrado e moído tradicional — 3 Corações, Pilão, Melitta.
+
+Café extraforte — 3 Corações, Pilão, Melitta.
+
+Café a vácuo — Pilão, 3 Corações, Melitta.
+
+Café solúvel — Nescafé, Iguaçu, 3 Corações.
+
+Cappuccino — 3 Corações, Nescafé, Melitta.
+
+Filtro de papel — Melitta, Brigitta, 3 Corações.
+
+Chá matte — Leão, Matte Leão, Dr. Oetker.
+
+Chá camomila — Leão, Dr. Oetker, Twinings.
+
+Chá erva-doce — Leão, Dr. Oetker, Twinings.
+
+Achocolatado em pó — Nescau, Toddy, Italac.
+
+Achocolatado pronto — Toddynho, Nescauzinho, Pirakids.
+
+Suco em pó — Tang, Clight, Mid.
+
+Suco pronto caixinha — Del Valle, Maguary, Tial.
+
+Néctar de uva — Del Valle, Maguary, Dafruta.
+
+Néctar de pêssego — Del Valle, Maguary, Dafruta.
+
+Água mineral sem gás — Crystal, Minalba, Indaiá.
+
+Água mineral com gás — Crystal, São Lourenço, Minalba.
+
+Refrigerante cola — Coca-Cola, Pepsi, Kuat Cola local/regional.
+
+Refrigerante guaraná — Guaraná Antarctica, Kuat, Fanta Guaraná.
+
+Refrigerante laranja — Fanta, Sukita, conveniência regional.
+
+Refrigerante limão — Sprite, Soda, regional.
+
+Água de coco — Kero Coco, Sococo, Obrigado.
+
+Isotônico — Gatorade, Powerade, Jungle.
+
+Energético — Red Bull, Monster, Fusion.
+
+Cerveja pilsen lata — Heineken, Brahma, Skol.
+
+Cerveja puro malte — Heineken, Amstel, Spaten.
+
+Vinho nacional suave — Campestre, Salton, Aurora.
+
+Vinho nacional seco — Aurora, Salton, Campestre.
+
+Espumante nacional — Salton, Chandon, Aurora.
+
+Cachaça — 51, Velho Barreiro, Ypióca.
+
+9) Congelados e prontos
+Pizza congelada — Sadia, Seara, Perdigão.
+
+Lasanha congelada — Sadia, Seara, Perdigão.
+
+Pão de queijo congelado — Forno de Minas, Sadia, Pif Paf.
+
+Batata palito congelada — McCain, Bem Brasil, Seara.
+
+Batata smile / especial — McCain, Bem Brasil, Seara.
+
+Legumes congelados — Daucy, Grano, Swift.
+
+Ervilha congelada — Daucy, Grano, Swift.
+
+Milho congelado — Daucy, Grano, Swift.
+
+Hambúrguer congelado — Seara, Sadia, Perdigão.
+
+Empanado tipo steak — Sadia, Seara, Perdigão.
+
+Kibe congelado — Sadia, Seara, Perdigão.
+
+Almôndega congelada — Sadia, Seara, Perdigão.
+
+Prato semipronto — Vapza, Sadia, Seara.
+
+Polenta congelada — Vapza, local, Seara.
+
+Mandioca congelada — Vapza, Bem Brasil, local.
+
+Açaí congelado — Frooty, Oakberry retail, São Braz regional.
+
+Sorvete pote — Kibon, Nestlé, Jundiá.
+
+Picolé — Kibon, Nestlé, Rochinha.
+
+Massa fresca recheada — Mezzani, Massa Leve, local.
+
+Salgado congelado — Sadia, Seara, local.
+
+10) Doces, sobremesas e snacks
+Chocolate ao leite — Lacta, Nestlé, Hershey’s.
+
+Chocolate meio amargo — Lacta, Nestlé, Hershey’s.
+
+Bombom sortido — Lacta, Nestlé, Garoto.
+
+Paçoca — Amor, Yoki, DaColônia.
+
+Goiabada — Predilecta, Val, Quero.
+
+Doce de leite — Itambé, Viçosa, Aviação.
+
+Marshmallow — Fini, Docile, Dori.
+
+Bala mastigável — Dori, Erlan, Arcor.
+
+Goma / jujuba — Fini, Dori, Docile.
+
+Chiclete — Trident, Bubbaloo, Mentos.
+
+Pirulito — Dori, Arcor, Erlan.
+
+Salgadinho de milho — Cheetos, Fandangos, Lucky.
+
+Batata chips — Ruffles, Lay’s, Yoki.
+
+Pipoca micro-ondas — Yoki, Carrefour/Qualitá, Kisabor.
+
+Amendoim japonês — Yoki, Dori, Santa Helena.
+
+Amendoim torrado — Yoki, Santa Helena, Dori.
+
+Castanha de caju — Mãe Terra, Jasmine, local.
+
+Castanha-do-pará — Jasmine, Mãe Terra, local.
+
+Uva passa — La Violetera, Jasmine, local.
+
+Frutas secas mix — Jasmine, Mãe Terra, local.
+
+Barra de cereal — Ritter, Trio, Nutry.
+
+Cereal matinal milho — Kellogg’s, Nestlé, Mãe Terra.
+
+Cereal de chocolate — Nescau, Kellogg’s, Nestlé.
+
+Creme de avelã — Nutella, Goiabella, regional.
+
+Leite fermentado — Yakult, Batavito, Vigor.
+
+11) Limpeza da casa
+Detergente líquido louça — Ypê, Limpol, Minuano.
+
+Detergente neutro — Ypê, Limpol, Minuano.
+
+Lava-louças gel — Finish, Ypê, Brilhante.
+
+Sabão em pó — Omo, Brilhante, Tixan Ypê.
+
+Sabão líquido roupas — Omo, Ariel, Tixan Ypê.
+
+Amaciante roupas — Downy, Comfort, Fofo.
+
+Água sanitária com cloro — Qboa, Brilux, Anhembi.
+
+Água sanitária sem cloro — Veja, Vanish, Reckitt.
+
+Desinfetante — Pinho Sol, Veja, Urca.
+
+Limpador multiuso — Veja, Ypê, Uau.
+
+Limpador perfumado — Uau, Veja, Ypê.
+
+Limpador com brilho — Veja, Destac, Bravo.
+
+Limpa-vidros — Veja, Uau, Azulim.
+
+Desengordurante — Veja, Ypê, CIF.
+
+Saponáceo cremoso — CIF, Sapólio, Brilux.
+
+Saponáceo em pó — Sapólio, CIF, Brilux.
+
+Limpador banheiro — Veja, CIF, Uau.
+
+Tira limo — Veja, CIF, Uau.
+
+Lustra móveis — Poliflor, Peroba, Destac.
+
+Cera líquida — Bravo, Poliflor, Trading Care.
+
+Limpador de piso — Uau, Veja, Casa & Perfume.
+
+Limpador concentrado — Veja, Lysol, Reckitt.
+
+Alvejante sem cloro — Vanish, Omo, Brilhante.
+
+Tira-manchas roupa — Vanish, Omo, Tixan.
+
+Lava roupas delicadas — Omo Delicado, Ariel, Mon Bijou.
+
+Sabão em barra — Ypê, Minuano, Urca.
+
+Esponja de louça — Scotch-Brite, Bom Bril, 3M.
+
+Bombril / lã de aço — Bombril, Assolan, Q Lustro.
+
+Pano de chão — Bettanin, Condor, Noviça.
+
+Flanela — Bettanin, Condor, Noviça.
+
+Panos multiuso — Perfex, Bettanin, EsfreBom.
+
+Saco de lixo 30L — Dover-Roll, Embalixo, EsfreBom.
+
+Saco de lixo 50L — Dover-Roll, Embalixo, EsfreBom.
+
+Saco de lixo 100L — Dover-Roll, Embalixo, EsfreBom.
+
+Luva de limpeza — Mucambo, Bettanin, Sanro.
+
+Vassoura — Bettanin, Condor, Noviça.
+
+Rodo — Bettanin, Condor, Noviça.
+
+Pá de lixo — Bettanin, Condor, Noviça.
+
+Balde — Sanremo, Plasútil, Jaguari.
+
+Inseticida aerosol — Raid, SBP, Baygon.
+
+Repelente — Off!, SBP, Exposis.
+
+Purificador de ar — Bom Ar, Glade, Air Wick.
+
+Desodorizador sanitário — Pato, Harpic, Glade.
+
+Limpa forno — Mr Músculo, Veja, Diabo Verde.
+
+Soda cáustica / desentupidor — Diabo Verde, Destop, local.
+
+12) Higiene pessoal
+Papel higiênico folha dupla — Neve, Mili, Personal.
+
+Papel higiênico folha simples — Mili, Familiar, Qualité.
+
+Papel toalha — Snob, Kitchen, Softys.
+
+Guardanapo de papel — Snob, Scott, Softys.
+
+Lenço de papel — Kleenex, Softys, Mili.
+
+Creme dental tradicional — Colgate, Oral-B, Closeup.
+
+Creme dental clareador — Colgate, Oral-B, Sorriso.
+
+Escova dental macia — Colgate, Oral-B, Johnson’s.
+
+Escova dental infantil — Colgate, Oral-B, Johnson’s.
+
+Fio dental — Colgate, Oral-B, Johnson’s.
+
+Antisséptico bucal — Listerine, Colgate Plax, Oral-B.
+
+Sabonete em barra — Dove, Lux, Francis.
+
+Sabonete antibacteriano — Protex, Lifebuoy, Dettol.
+
+Sabonete líquido — Dove, Lux, Nivea.
+
+Shampoo cabelos normais — Pantene, Elseve, Seda.
+
+Shampoo anticaspa — Clear, Head & Shoulders, Darrow.
+
+Condicionador — Pantene, Elseve, Seda.
+
+Creme para pentear — Seda, Elseve, Salon Line.
+
+Máscara capilar — Skala, Elseve, Pantene.
+
+Desodorante aerosol — Rexona, Nivea, Dove.
+
+Desodorante roll-on — Rexona, Nivea, Dove.
+
+Aparelho de barbear — Gillette, Bic, Enox.
+
+Lâmina de barbear — Gillette, Bic, Wilkinson.
+
+Creme de barbear — Bozzano, Gillette, Nivea Men.
+
+Absorvente externo — Sempre Livre, Intimus, Sym.
+
+Protetor diário — Carefree, Sempre Livre, Intimus.
+
+Papel umedecido / lenço umedecido — Huggies, Pampers, Personal.
+
+Algodão — Apolo, Sussex, Cremer.
+
+Cotonete / haste flexível — Cotonetes, Johnson’s, Cremer.
+
+Fralda infantil RN — Pampers, Huggies, MamyPoko.
+
+Fralda infantil P — Pampers, Huggies, MamyPoko.
+
+Fralda infantil M — Pampers, Huggies, MamyPoko.
+
+Fralda infantil G — Pampers, Huggies, MamyPoko.
+
+Fralda geriátrica — Bigfral, Plenitud, Tena.
+
+Talco infantil — Granado, Johnson’s, Turma da Xuxinha.
+
+Creme para assadura — Hipoglós, Bepantol, Huggies.
+
+Protetor solar — Nivea Sun, Sundown, L’Oréal Solar.
+
+Hidratante corporal — Nivea, Monange, Dove.
+
+Álcool em gel — Asseptgel, Premisse, local.
+
+Sabonete íntimo — Dermacyd, Intimus, Nivea.
+
+13) Bebês, pets e utilidades rápidas
+Fórmula infantil 1 — Nan, Aptamil, Nestogeno.
+
+Fórmula infantil 2 — Nan, Aptamil, Nestogeno.
+
+Mamadeira — Lillo, Kuka, Avent.
+
+Chupeta — Lillo, Kuka, Avent.
+
+Mordedor — Lillo, Kuka, Avent.
+
+Papinha infantil — Nestlé, Jasmine Baby, local.
+
+Cereal infantil — Mucilon, Nestlé, Nutribom.
+
+Ração para cães — Pedigree, Golden, Dog Chow.
+
+Ração para gatos — Whiskas, Golden, Friskies.
+
+Sachê para cães — Pedigree, Cesar, Dog Chow.
+
+Sachê para gatos — Whiskas, Friskies, Fancy Feast.
+
+Areia para gato — Pipicat, Katbom, Viva Verde.
+
+Água sanitária pet friendly — marcas regionais, Uau Pet, Procão.
+
+Papel alumínio — Wyda, Boreda, Thermoprat.
+
+Filme PVC — Wyda, Boreda, Thermoprat.
+
+Papel manteiga — Wyda, Assaí/Qualitá, local.
+
+Fósforo — Fiat Lux, Paraná, Guarany.
+
+Acendedor — Bic, Cricket, Clipper.
+
+Velas — Rio, São João, local.
+
+Pilhas AA — Duracell, Rayovac, Elgin.
+
+Pilhas AAA — Duracell, Rayovac, Elgin.
+
+Copo descartável 200ml — Copobras, Altacoppo, Cristalcopo.
+
+Prato descartável — Copobras, Altacoppo, Cristalcopo.
+
+Guardanapo festa — Snob, Mili, Scott.
+
+Canudo / talher descartável — Copobras, Prafesta, local.
+
+14) Padaria, café da manhã e complementos
+Bolo pronto — Panco, Bauducco, Pullman.
+
+Bolo monoporção — Bimbo, Bauducco, Panco.
+
+Pão de queijo pronto — Forno de Minas, Pif Paf, local.
+
+Croissant industrializado — Bauducco, Pullman, local.
+
+Panetone — Bauducco, Visconti, Tommy.
+
+Torrone / natalino — Montevérgine, Arcor, local.
+
+Geleia de morango — Queensberry, Hero, Predilecta.
+
+Geleia de uva — Queensberry, Hero, Predilecta.
+
+Mel — Native, Baldoni, local.
+
+Requeijão light — Vigor, Itambé, Catupiry.
+
+15) Itens extras muito comuns
+Milho para canjica — Yoki, Sinhá, Kisabor.
+
+Canjiquinha — Yoki, Sinhá, Kisabor.
+
+Sagu — Yoki, Apti, local.
+
+Coco ralado — Sococo, Ducoco, Menina.
+
+Amido de milho — Maizena, Yoki, Apti.
+
+Farinha láctea — Nestlé, Mucilon, local.
+
+Mistura para mingau — Mucilon, Nestlé, Nutribom.
+
+Creme de cebola — Maggi, Knorr, Apti.
+
+Sopa instantânea — Maggi, Knorr, Nestlé.
+
+Macarrão para sopa — Renata, Adria, Dona Benta.
+
+Gergelim — Jasmine, Bombay, Kitano.
+
+Chia — Jasmine, Mãe Terra, Vitalin.
+
+Linhaça — Jasmine, Mãe Terra, Vitalin.
+
+Farinha de aveia — Quaker, Nestlé, Jasmine.
+
+Sucrilhos — Kellogg’s, Nestlé, Carrefour/Qualitá.
+
+Torrone snack — Arcor, Montevérgine, local.
+
+Bebida isotônica em pó — Gatorade, Marathon, local.
+
+Água saborizada — Crystal, Minalba, Schin.
+
+Refrigerante zero — Coca-Cola Zero, Pepsi Black, Guaraná Zero.
+
+Cerveja zero álcool — Heineken 0.0, Bud Zero, Corona Cero.
+
+Leite com sabor — Toddynho, Nescau, Pirakids.
+
+Suplemento nutricional — Sustagen, Ensure, Nutren.
+
+Barrinha proteica — Bold, Nutrata, Integralmédica retail.
+
+Gelatina pronta — Danette, Dr. Oetker, local.
+
+Pudim pronto — Nestlé, Danette, local.
+
+Doce em calda — Olé, Predilecta, Quero.
+
+Pêssego em calda — Olé, Predilecta, Quero.
+
+Ameixa em calda — Olé, Predilecta, Quero.
+
+Leite de coco light — Sococo, Ducoco, Menina.
+
+Coco ralado adoçado — Sococo, Ducoco, Menina.
+
+Mistura para pão — Fleischmann, Renata, Dona Benta.
+
+Mistura para pizza — Fleischmann, Renata, Dona Benta.
+
+Barra de chocolate culinária — Nestlé, Garoto, Harald.
+
+Chocolate granulado — Dori, Harald, Mavalério.
+
+Leite em pó instantâneo — Ninho, Italac, Piracanjuba.
+
+Café em cápsula — Nescafé Dolce Gusto, 3 Corações, Pilão.
+
+Adoçante líquido — Zero-Cal, Linea, Finn.
+
+Adoçante em pó — Linea, Finn, Zero-Cal.
+
+Barra de sabão glicerinado — Ypê, Minuano, Urca.
+
+Sabão de coco — Ypê, Urca, Ruth Care.
+
+Detergente antibac — Ypê, Limpol, Minuano.
+
+Limpador clorado — Veja, Uau, CIF.
+
+Escova sanitária — Bettanin, Condor, Noviça.
+
+Rolo adesivo roupa — Bettanin, Condor, Scotch-Brite.
+
+Desumidificador / anti-mofo — Secar, Ordene, local.
+
+Isqueiro culinário / fogo — Bic, Cricket, Clipper.
+
+Toalha umedecida multiuso — Ypê, Uau, Casa KM.
+
+Limpador para cozinha — Veja, CIF, Uau.
+
+Limpador para inox — CIF, Poliflor, Veja.
+
+Descartáveis para freezer / pote simples — Plasútil, Sanremo, Jaguar.
