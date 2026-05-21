@@ -78,22 +78,30 @@ class FormItemModal(ctk.CTkToplevel):
         frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         frame.pack(fill="both", expand=True, padx=20, pady=16)
 
-        # Item sugerido (catálogo) — só aparece em modo NOVO
+        # Busca no catálogo — só em modo NOVO (com autocomplete filtrado)
         if self._item is None:
-            self._label(frame, "Item sugerido (catálogo)")
-            opcoes = ["— digitar item novo —"] + sorted(i["nome"] for i in self._cat)
-            self._cb_sugestao = ctk.CTkComboBox(
-                frame, values=opcoes, width=460, state="readonly",
-                command=lambda v: self._on_sugestao_selecionada(v),
+            self._label(frame, "Buscar item no catálogo (500+ opções)")
+            self._e_busca_cat = ctk.CTkEntry(
+                frame, placeholder_text="Digite parte do nome — ex.: arroz, sabão, café…",
             )
-            self._cb_sugestao.set("— digitar item novo —")
-            self._cb_sugestao.pack(fill="x", pady=(2, 8))
+            self._e_busca_cat.pack(fill="x", pady=(2, 4))
+            self._e_busca_cat.bind(
+                "<KeyRelease>", lambda _ev: self._on_busca_catalogo(),
+            )
             ctk.CTkLabel(
                 frame,
-                text="Escolha um item do catálogo pra preencher nome, categoria e marcas; ou digite tudo manualmente abaixo.",
+                text="Clique em um item da lista pra preencher nome, categoria e marcas. "
+                     "Ou deixe em branco e digite tudo manualmente abaixo.",
                 font=ctk.CTkFont(size=10),
-                text_color=cores["texto_mudo"], wraplength=460, justify="left",
-            ).pack(anchor="w", pady=(0, 8))
+                text_color=cores["texto_mudo"],
+                wraplength=460, justify="left",
+            ).pack(anchor="w", pady=(0, 4))
+            # Container dos resultados (scroll) — só aparece quando tem busca
+            self._frame_resultados = ctk.CTkScrollableFrame(
+                frame, fg_color=cores["fundo"], corner_radius=6, height=180,
+            )
+            self._frame_resultados.grid_columnconfigure(0, weight=1)
+            # Não dá pack agora — só aparece em _on_busca_catalogo
 
         self._label(frame, "Nome *")
         self._e_nome = ctk.CTkEntry(frame, placeholder_text="Ex.: Arroz, Sabão líquido")
@@ -204,23 +212,96 @@ class FormItemModal(ctk.CTkToplevel):
             self._e_marca_nova.pack_forget()
 
     # ------------------------------------------------------------------
-    # Item sugerido: preencher nome/categoria/marcas ao selecionar
+    # Busca no catálogo: filtra em tempo real e mostra resultados clicáveis
     # ------------------------------------------------------------------
 
-    def _on_sugestao_selecionada(self, nome: str):
-        if nome == "— digitar item novo —":
-            self._refresh_combo_marcas([])
+    def _on_busca_catalogo(self):
+        """Filtra o catálogo com substring case-insensitive (ignora acentos
+        básicos) e exibe até N matches como botões clicáveis."""
+        termo = self._e_busca_cat.get().strip().lower()
+
+        # Limpa resultados anteriores
+        for w in self._frame_resultados.winfo_children():
+            w.destroy()
+
+        if not termo:
+            self._frame_resultados.pack_forget()
             return
-        it = self._cat_por_nome.get(nome.lower())
-        if not it:
+
+        # Filtragem em-memória: substring case-insensitive
+        # (catalogo tem ~500 itens — operação trivial em Python puro)
+        matches = [
+            it for it in self._cat
+            if termo in it["nome"].lower()
+            or termo in it.get("categoria", "").lower()
+        ]
+
+        # Limita pra evitar render gigante (mas mostra contador)
+        LIMITE = 30
+        total = len(matches)
+        matches_show = matches[:LIMITE]
+
+        if not matches_show:
+            ctk.CTkLabel(
+                self._frame_resultados,
+                text="Nenhum item encontrado. "
+                     "Você pode preencher os campos manualmente abaixo.",
+                text_color=self._cores["texto_mudo"],
+                font=ctk.CTkFont(size=11),
+                wraplength=440,
+            ).pack(pady=8)
+            self._frame_resultados.pack(fill="x", pady=(0, 8))
             return
-        # Preenche nome e categoria (overwrite se já tinha algo)
+
+        # Mostra cada match como botão clicável
+        for it in matches_show:
+            self._botao_resultado(it)
+
+        if total > LIMITE:
+            ctk.CTkLabel(
+                self._frame_resultados,
+                text=f"… mostrando {LIMITE} de {total}. Refine a busca.",
+                text_color=self._cores["texto_mudo"],
+                font=ctk.CTkFont(size=10),
+            ).pack(pady=(4, 6))
+
+        self._frame_resultados.pack(fill="x", pady=(0, 8))
+
+    def _botao_resultado(self, it: dict):
+        """Linha clicável pra cada match: 'Nome — categoria · N marcas'."""
+        cores = self._cores
+        n_marcas = len(it.get("marcas", []))
+        sub = it.get("categoria", "")
+        if n_marcas:
+            sub += f"  ·  {n_marcas} marca(s)"
+        # Botão full-width com texto à esquerda
+        btn = ctk.CTkButton(
+            self._frame_resultados,
+            text=f"{it['nome']}\n{sub}",
+            anchor="w", height=42,
+            fg_color=cores["card"], hover_color=cores["primario"],
+            text_color=cores["texto"],
+            font=ctk.CTkFont(size=12),
+            command=lambda d=it: self._selecionar_item_catalogo(d),
+        )
+        btn.pack(fill="x", pady=1, padx=2)
+
+    def _selecionar_item_catalogo(self, it: dict):
+        """Aplica o item escolhido nos campos do form e esconde a busca."""
+        # Preenche nome e categoria (overwrite)
         self._e_nome.delete(0, "end")
         self._e_nome.insert(0, it["nome"])
         self._e_categoria.delete(0, "end")
-        self._e_categoria.insert(0, it["categoria"])
+        self._e_categoria.insert(0, it.get("categoria", ""))
         # Marcas sugeridas pra esse item
-        self._refresh_combo_marcas(it["marcas"])
+        self._refresh_combo_marcas(it.get("marcas", []))
+        # Limpa busca e esconde resultados
+        self._e_busca_cat.delete(0, "end")
+        for w in self._frame_resultados.winfo_children():
+            w.destroy()
+        self._frame_resultados.pack_forget()
+        # Foco no próximo campo natural (Unidade)
+        self._e_unidade.focus_set()
 
     # ------------------------------------------------------------------
     # Preencher modo edição
