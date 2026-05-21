@@ -261,13 +261,25 @@ class ComprasCasaView(ctk.CTkFrame):
             ).pack(pady=40)
             return
 
+        # Header com contador + botões de export
+        topo = ctk.CTkFrame(self._scroll_lista, fg_color="transparent")
+        topo.pack(fill="x", pady=(0, 8))
         ctk.CTkLabel(
-            self._scroll_lista,
-            text=f"🛒 {len(itens)} item(ns) para comprar",
+            topo, text=f"🛒 {len(itens)} item(ns) para comprar",
             font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=self._cores["alerta"],
-            anchor="w",
-        ).pack(anchor="w", pady=(0, 8))
+            text_color=self._cores["alerta"], anchor="w",
+        ).pack(side="left")
+        ctk.CTkButton(
+            topo, text="📱 WhatsApp", height=28, width=110,
+            command=self._exportar_whatsapp,
+        ).pack(side="right", padx=2)
+        ctk.CTkButton(
+            topo, text="📄 PDF", height=28, width=90,
+            fg_color="transparent", border_width=1,
+            border_color=self._cores["borda"],
+            text_color=self._cores["texto"],
+            command=self._exportar_pdf,
+        ).pack(side="right", padx=2)
 
         # Agrupa por categoria
         grupos: dict[str, list] = {}
@@ -365,6 +377,125 @@ class ComprasCasaView(ctk.CTkFrame):
             btns, text="Excluir", width=100,
             fg_color=self._cores["alerta"], hover_color="#B91C1C",
             command=_exc,
+        ).pack(side="left", padx=4)
+
+    # ------------------------------------------------------------------
+    # Exportações (PDF + WhatsApp)
+    # ------------------------------------------------------------------
+
+    def _exportar_pdf(self):
+        from tkinter import filedialog
+        from datetime import date as _date
+        from views.compras_casa.imprimir_lista import imprimir_lista_pdf
+
+        itens = listar_lista_compras()
+        if not itens:
+            self._toast("Lista vazia — nada a exportar.", "atencao")
+            return
+        nome_inicial = f"lista_compras_{_date.today().isoformat()}.pdf"
+        destino = filedialog.asksaveasfilename(
+            title="Salvar lista como PDF",
+            defaultextension=".pdf",
+            initialfile=nome_inicial,
+            filetypes=[("PDF", "*.pdf")],
+        )
+        if not destino:
+            return
+        try:
+            imprimir_lista_pdf(itens, destino)
+            self._toast(f"PDF salvo: {destino}")
+        except Exception as e:
+            self._toast(f"Erro ao gerar PDF: {e}", "erro")
+
+    def _exportar_whatsapp(self):
+        """Abre diálogo pra confirmar/inserir número, copia texto pro
+        clipboard, abre wa.me no navegador."""
+        import webbrowser
+        from database import obter_configuracao, salvar_configuracao
+        from views.compras_casa.imprimir_lista import (
+            formatar_texto_lista, gerar_link_whatsapp,
+        )
+
+        itens = listar_lista_compras()
+        if not itens:
+            self._toast("Lista vazia — nada a enviar.", "atencao")
+            return
+
+        texto = formatar_texto_lista(itens)
+        numero_salvo = obter_configuracao("whatsapp_numero_padrao", "")
+
+        cores = self._cores
+        dlg = ctk.CTkToplevel(self)
+        dlg.title("Enviar lista pelo WhatsApp")
+        dlg.geometry("440x260")
+        dlg.grab_set()
+        ctk.CTkLabel(
+            dlg, text="📱 Enviar lista pelo WhatsApp",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=cores["texto"],
+        ).pack(pady=(16, 4), padx=20)
+        ctk.CTkLabel(
+            dlg, text="Vou abrir o WhatsApp Web/Desktop com a lista já\n"
+                       "formatada. Você só clica em enviar.",
+            font=ctk.CTkFont(size=11),
+            text_color=cores["texto_mudo"], justify="center",
+        ).pack(pady=(0, 12), padx=20)
+        ctk.CTkLabel(
+            dlg, text="Número do destinatário (com DDD)",
+            font=ctk.CTkFont(size=11),
+            text_color=cores["texto"], anchor="w",
+        ).pack(anchor="w", padx=20)
+        e_num = ctk.CTkEntry(dlg, placeholder_text="Ex.: 31999990000")
+        e_num.insert(0, numero_salvo)
+        e_num.pack(fill="x", padx=20, pady=(2, 4))
+        var_lembrar = ctk.BooleanVar(value=bool(numero_salvo))
+        ctk.CTkCheckBox(
+            dlg, text="Lembrar este número como padrão",
+            variable=var_lembrar,
+        ).pack(anchor="w", padx=20, pady=4)
+
+        def _enviar():
+            numero = e_num.get().strip()
+            if var_lembrar.get() and numero:
+                salvar_configuracao("whatsapp_numero_padrao", numero)
+            elif not var_lembrar.get():
+                salvar_configuracao("whatsapp_numero_padrao", "")
+            # Copia texto pro clipboard como fallback
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(texto)
+            except Exception:
+                pass
+            url = gerar_link_whatsapp(texto, numero=numero)
+            webbrowser.open(url, new=2)
+            dlg.destroy()
+            self._toast("WhatsApp aberto. Texto também copiado.")
+
+        def _so_copiar():
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(texto)
+                self._toast("Texto copiado.")
+            except Exception as e:
+                self._toast(f"Falha ao copiar: {e}", "erro")
+            dlg.destroy()
+
+        btns = ctk.CTkFrame(dlg, fg_color="transparent")
+        btns.pack(pady=8)
+        ctk.CTkButton(
+            btns, text="Cancelar", width=90,
+            fg_color="transparent", border_width=1,
+            border_color=cores["borda"], text_color=cores["texto"],
+            command=dlg.destroy,
+        ).pack(side="left", padx=4)
+        ctk.CTkButton(
+            btns, text="Só copiar texto", width=130,
+            fg_color="transparent", border_width=1,
+            border_color=cores["primario"], text_color=cores["primario"],
+            command=_so_copiar,
+        ).pack(side="left", padx=4)
+        ctk.CTkButton(
+            btns, text="Abrir WhatsApp", width=130, command=_enviar,
         ).pack(side="left", padx=4)
 
     # ------------------------------------------------------------------
