@@ -48,7 +48,7 @@ class FormCompra(ctk.CTkToplevel):
 
         self.title("Serenus — Lançar Compra no Cartão")
         self.geometry("540x660")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.grab_set()
         self.bind("<Escape>", lambda e: self.destroy())
 

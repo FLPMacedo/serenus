@@ -31,7 +31,7 @@ class ContaPagarFormModal(ctk.CTkToplevel):
         titulo = "Editar Despesa" if conta else "Nova Despesa"
         self.title(f"Serenus — {titulo}")
         self.geometry("480x680")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.grab_set()
         self.bind("<Escape>", lambda e: self.destroy())
 

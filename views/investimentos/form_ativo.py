@@ -23,7 +23,7 @@ class FormAtivoModal(ctk.CTkToplevel):
 
         self.title("Editar ativo" if ativo else "Novo ativo")
         self.geometry("460x520")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.grab_set()
 
         self._contas = listar_contas_investimento(apenas_ativas=True)

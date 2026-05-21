@@ -26,7 +26,7 @@ class FormMovimentacaoModal(ctk.CTkToplevel):
 
         self.title("Nova movimentação")
         self.geometry("480x620")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.grab_set()
 
         self._contas = listar_contas_investimento(apenas_ativas=True)

@@ -24,7 +24,7 @@ class FormCartao(ctk.CTkToplevel):
         titulo = "Editar Cartão" if cartao else "Novo Cartão"
         self.title(f"Serenus — {titulo}")
         self.geometry("740x560")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.grab_set()
         self.bind("<Escape>", lambda e: self.destroy())
 

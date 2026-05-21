@@ -549,7 +549,7 @@ class DividaFormModal(ctk.CTkToplevel):
         titulo = "Editar Dívida" if divida else "Nova Dívida"
         self.title(f"Serenus — {titulo}")
         self.geometry("460x580")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.grab_set()
         self.bind("<Escape>", lambda e: self.destroy())
         self._build_ui()

@@ -587,7 +587,7 @@ class FonteFormModal(ctk.CTkToplevel):
         titulo = "Editar Fonte" if fonte else "Nova Fonte de Renda"
         self.title(f"Serenus — {titulo}")
         self.geometry("500x620")
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.grab_set()
         self.bind("<Escape>", lambda e: self.destroy())
 

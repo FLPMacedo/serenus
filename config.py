@@ -52,8 +52,11 @@ def get_tema(nome: str = TEMA_PADRAO) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 SIDEBAR_WIDTH = 220
-MIN_WIDTH     = 1100
-MIN_HEIGHT    = 720
+# Mínimos reduzidos para acomodar 1280x720 (notebooks comuns) e
+# 1366x768 com DPI 125% (Windows padrão). Sidebar 220 + conteúdo 780
+# = 1000. Altura 640 deixa margem pra barra de tarefas + título.
+MIN_WIDTH     = 1000
+MIN_HEIGHT    = 640
 
 # ---------------------------------------------------------------------------
 # UX / comportamento

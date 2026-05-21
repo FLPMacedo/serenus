@@ -77,8 +77,10 @@ class FormOSModal(ctk.CTkToplevel):
         titulo = (f"Editar {self._os_existente.numero}"
                   if self._os_existente else "Nova Ordem de Serviço")
         self.title(titulo)
-        self.geometry("640x720")
-        self.resizable(False, True)
+        # Altura inicial = MIN_HEIGHT da janela principal (640). Modal usa
+        # CTkScrollableFrame interno, então conteúdo continua acessível.
+        self.geometry("640x640")
+        self.resizable(True, True)
         self.grab_set()
         self.bind("<Escape>", lambda _e: self.destroy())
         self.after(80, self._centralizar)
