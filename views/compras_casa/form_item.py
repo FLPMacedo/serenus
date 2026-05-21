@@ -55,7 +55,18 @@ class FormItemModal(ctk.CTkToplevel):
         self.geometry("520x620")
         self.resizable(False, True)
         self.grab_set()
-        self.bind("<Escape>", lambda _e: self.destroy())
+        # Escape fecha o modal — se houver popup de busca aberto, fecha também
+        def _on_escape(_e=None):
+            if (getattr(self, "_popup_busca", None) is not None
+                    and self._popup_busca.winfo_exists()):
+                self._fechar_popup_busca()
+                return
+            self.destroy()
+        self.bind("<Escape>", _on_escape)
+        # Quando o modal é destruído, garante que o popup também é fechado
+        self.bind("<Destroy>",
+                   lambda _e: self._fechar_popup_busca()
+                   if getattr(self, "_popup_busca", None) else None)
         self.after(80, self._centralizar)
 
         self._build()
@@ -78,30 +89,33 @@ class FormItemModal(ctk.CTkToplevel):
         frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         frame.pack(fill="both", expand=True, padx=20, pady=16)
 
-        # Busca no catálogo — só em modo NOVO (com autocomplete filtrado)
+        # Busca no catálogo — só em modo NOVO (autocomplete popup tipo dropdown)
         if self._item is None:
             self._label(frame, "Buscar item no catálogo (500+ opções)")
             self._e_busca_cat = ctk.CTkEntry(
-                frame, placeholder_text="Digite parte do nome — ex.: arroz, sabão, café…",
+                frame, placeholder_text="Clique aqui e digite — ex.: arroz, sabão…",
             )
-            self._e_busca_cat.pack(fill="x", pady=(2, 4))
+            self._e_busca_cat.pack(fill="x", pady=(2, 2))
+            # Abre o popup ao clicar / ganhar foco
+            self._e_busca_cat.bind("<FocusIn>",  lambda _e: self._abrir_popup_busca())
+            self._e_busca_cat.bind("<KeyRelease>", lambda _e: self._atualizar_popup_busca())
+            self._e_busca_cat.bind("<Escape>",   lambda _e: self._fechar_popup_busca())
+            # Pequeno delay no FocusOut pra clique no popup poder processar
             self._e_busca_cat.bind(
-                "<KeyRelease>", lambda _ev: self._on_busca_catalogo(),
+                "<FocusOut>",
+                lambda _e: self.after(180, self._fechar_popup_busca_se_perdeu_foco),
             )
             ctk.CTkLabel(
                 frame,
-                text="Clique em um item da lista pra preencher nome, categoria e marcas. "
+                text="Clique em um item pra preencher nome, categoria e marcas. "
                      "Ou deixe em branco e digite tudo manualmente abaixo.",
                 font=ctk.CTkFont(size=10),
                 text_color=cores["texto_mudo"],
                 wraplength=460, justify="left",
-            ).pack(anchor="w", pady=(0, 4))
-            # Container dos resultados (scroll) — só aparece quando tem busca
-            self._frame_resultados = ctk.CTkScrollableFrame(
-                frame, fg_color=cores["fundo"], corner_radius=6, height=180,
-            )
-            self._frame_resultados.grid_columnconfigure(0, weight=1)
-            # Não dá pack agora — só aparece em _on_busca_catalogo
+            ).pack(anchor="w", pady=(0, 8))
+            # Popup (criado on-demand, fica como atributo pra controle)
+            self._popup_busca: ctk.CTkToplevel | None = None
+            self._scroll_popup = None
 
         self._label(frame, "Nome *")
         self._e_nome = ctk.CTkEntry(frame, placeholder_text="Ex.: Arroz, Sabão líquido")
@@ -212,96 +226,159 @@ class FormItemModal(ctk.CTkToplevel):
             self._e_marca_nova.pack_forget()
 
     # ------------------------------------------------------------------
-    # Busca no catálogo: filtra em tempo real e mostra resultados clicáveis
+    # Busca no catálogo: popup dropdown tipo autocomplete
     # ------------------------------------------------------------------
 
-    def _on_busca_catalogo(self):
-        """Filtra o catálogo com substring case-insensitive (ignora acentos
-        básicos) e exibe até N matches como botões clicáveis."""
-        termo = self._e_busca_cat.get().strip().lower()
+    _POPUP_LIMITE = 30
+    _POPUP_HEIGHT = 240
 
-        # Limpa resultados anteriores
-        for w in self._frame_resultados.winfo_children():
+    def _abrir_popup_busca(self):
+        """Cria/exibe o popup dropdown logo abaixo do campo de busca."""
+        if self._popup_busca is not None and self._popup_busca.winfo_exists():
+            # já existe — só atualiza conteúdo
+            self._atualizar_popup_busca()
+            return
+        cores = self._cores
+        popup = ctk.CTkToplevel(self)
+        popup.overrideredirect(True)  # sem barra de título
+        popup.attributes("-topmost", True)
+        popup.configure(fg_color=cores["card"])
+
+        # Borda visual
+        borda = ctk.CTkFrame(
+            popup, fg_color=cores["card"],
+            border_color=cores["primario"], border_width=1, corner_radius=6,
+        )
+        borda.pack(fill="both", expand=True, padx=1, pady=1)
+        borda.grid_columnconfigure(0, weight=1)
+        borda.grid_rowconfigure(0, weight=1)
+
+        scroll = ctk.CTkScrollableFrame(
+            borda, fg_color=cores["card"], corner_radius=0,
+        )
+        scroll.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+        scroll.grid_columnconfigure(0, weight=1)
+        self._scroll_popup = scroll
+        self._popup_busca = popup
+
+        self._posicionar_popup()
+        self._atualizar_popup_busca()
+
+    def _posicionar_popup(self):
+        """Coloca o popup logo abaixo do entry, mesma largura."""
+        if not self._popup_busca:
+            return
+        self._e_busca_cat.update_idletasks()
+        x = self._e_busca_cat.winfo_rootx()
+        y = self._e_busca_cat.winfo_rooty() + self._e_busca_cat.winfo_height() + 2
+        w = self._e_busca_cat.winfo_width()
+        self._popup_busca.geometry(f"{w}x{self._POPUP_HEIGHT}+{x}+{y}")
+
+    def _atualizar_popup_busca(self):
+        """Repopula o popup com matches do termo atual no entry."""
+        if not self._popup_busca or not self._popup_busca.winfo_exists():
+            # ainda não aberto — abre
+            self._abrir_popup_busca()
+            return
+
+        scroll = self._scroll_popup
+        for w in scroll.winfo_children():
             w.destroy()
 
-        if not termo:
-            self._frame_resultados.pack_forget()
-            return
+        termo = self._e_busca_cat.get().strip().lower()
+        if termo:
+            matches = [
+                it for it in self._cat
+                if termo in it["nome"].lower()
+                or termo in it.get("categoria", "").lower()
+            ]
+        else:
+            # Sem termo: mostra TODOS (até o limite) — usuário vê o catálogo
+            matches = list(self._cat)
 
-        # Filtragem em-memória: substring case-insensitive
-        # (catalogo tem ~500 itens — operação trivial em Python puro)
-        matches = [
-            it for it in self._cat
-            if termo in it["nome"].lower()
-            or termo in it.get("categoria", "").lower()
-        ]
-
-        # Limita pra evitar render gigante (mas mostra contador)
-        LIMITE = 30
         total = len(matches)
-        matches_show = matches[:LIMITE]
+        show = matches[: self._POPUP_LIMITE]
 
-        if not matches_show:
+        if not show:
             ctk.CTkLabel(
-                self._frame_resultados,
-                text="Nenhum item encontrado. "
-                     "Você pode preencher os campos manualmente abaixo.",
+                scroll,
+                text="Nenhum item encontrado.\nPreencha manualmente abaixo.",
                 text_color=self._cores["texto_mudo"],
-                font=ctk.CTkFont(size=11),
-                wraplength=440,
-            ).pack(pady=8)
-            self._frame_resultados.pack(fill="x", pady=(0, 8))
+                font=ctk.CTkFont(size=11), justify="center",
+            ).pack(pady=10)
             return
 
-        # Mostra cada match como botão clicável
-        for it in matches_show:
-            self._botao_resultado(it)
+        for it in show:
+            self._linha_resultado_popup(it)
 
-        if total > LIMITE:
+        if total > self._POPUP_LIMITE:
             ctk.CTkLabel(
-                self._frame_resultados,
-                text=f"… mostrando {LIMITE} de {total}. Refine a busca.",
+                scroll,
+                text=f"… {self._POPUP_LIMITE} de {total}. Refine a busca.",
                 text_color=self._cores["texto_mudo"],
                 font=ctk.CTkFont(size=10),
             ).pack(pady=(4, 6))
 
-        self._frame_resultados.pack(fill="x", pady=(0, 8))
+        # Reposiciona (caso o entry tenha se movido)
+        self._posicionar_popup()
 
-    def _botao_resultado(self, it: dict):
-        """Linha clicável pra cada match: 'Nome — categoria · N marcas'."""
+    def _linha_resultado_popup(self, it: dict):
         cores = self._cores
         n_marcas = len(it.get("marcas", []))
         sub = it.get("categoria", "")
         if n_marcas:
             sub += f"  ·  {n_marcas} marca(s)"
-        # Botão full-width com texto à esquerda
         btn = ctk.CTkButton(
-            self._frame_resultados,
+            self._scroll_popup,
             text=f"{it['nome']}\n{sub}",
-            anchor="w", height=42,
-            fg_color=cores["card"], hover_color=cores["primario"],
+            anchor="w", height=44,
+            fg_color="transparent", hover_color=cores["primario"],
             text_color=cores["texto"],
             font=ctk.CTkFont(size=12),
             command=lambda d=it: self._selecionar_item_catalogo(d),
         )
-        btn.pack(fill="x", pady=1, padx=2)
+        btn.pack(fill="x", pady=1)
 
     def _selecionar_item_catalogo(self, it: dict):
-        """Aplica o item escolhido nos campos do form e esconde a busca."""
-        # Preenche nome e categoria (overwrite)
+        """Aplica o item escolhido nos campos do form e fecha o popup."""
         self._e_nome.delete(0, "end")
         self._e_nome.insert(0, it["nome"])
         self._e_categoria.delete(0, "end")
         self._e_categoria.insert(0, it.get("categoria", ""))
-        # Marcas sugeridas pra esse item
         self._refresh_combo_marcas(it.get("marcas", []))
-        # Limpa busca e esconde resultados
         self._e_busca_cat.delete(0, "end")
-        for w in self._frame_resultados.winfo_children():
-            w.destroy()
-        self._frame_resultados.pack_forget()
-        # Foco no próximo campo natural (Unidade)
+        self._fechar_popup_busca()
         self._e_unidade.focus_set()
+
+    def _fechar_popup_busca(self):
+        if self._popup_busca and self._popup_busca.winfo_exists():
+            self._popup_busca.destroy()
+        self._popup_busca = None
+        self._scroll_popup = None
+
+    def _fechar_popup_busca_se_perdeu_foco(self):
+        """Fecha apenas se nenhum widget do popup tem foco agora.
+        Evita fechar quando o usuário tá clicando num item do popup."""
+        if not self._popup_busca or not self._popup_busca.winfo_exists():
+            return
+        try:
+            foco = self.focus_get()
+        except KeyError:
+            foco = None
+        if foco is None:
+            self._fechar_popup_busca()
+            return
+        # Foco passou pra dentro do popup? Mantém aberto.
+        # Senão, fecha.
+        w = foco
+        while w is not None:
+            if w is self._popup_busca:
+                return  # foco dentro do popup
+            try:
+                w = w.master
+            except AttributeError:
+                break
+        self._fechar_popup_busca()
 
     # ------------------------------------------------------------------
     # Preencher modo edição
