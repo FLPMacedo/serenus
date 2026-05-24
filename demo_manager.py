@@ -1814,6 +1814,258 @@ def _popular_prestador_servico(conn, planos, rng, hoje) -> int:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Casal planejando o futuro
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Casal jovem, ambos CLT, renda combinada R$ 11.500. Vive com sogros (sem
+# aluguel). Sobra grande no mês. 5 metas grandes ativas: casamento, casa
+# própria, viagem, primeiro filho, fundo emergência. Investimento moderado
+# (Tesouro + CDB). Bom perfil pra mostrar planejamento de longo prazo.
+
+def _popular_casal_planejando(conn, planos, rng, hoje) -> int:
+    # Casal: aumenta a renda do CLT (representa salário combinado)
+    conn.execute("UPDATE fontes_receita SET valor_mensal=7500.0, ativa=1, periodicidade='mensal' WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET valor_mensal=4000.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    conn.executemany(
+        "INSERT INTO receitas_especiais (nome, mes, valor, tipo, recorrente_anual) VALUES (?,?,?,?,1)",
+        [("13º Salário (casal)", 11, 11_500.00, "clt"),
+         ("Férias + 1/3 (casal)", 6, 15_333.33, "clt")],
+    )
+
+    # Mora com família, sem aluguel
+    fixas = [
+        ("Internet",                         109.90, 10),
+        ("Streaming (Netflix, Spotify…)",     59.90, 10),
+        ("Plano de saúde",                   480.00, 15),  # casal
+        ("Telefone / Celular",               179.80, 10),  # 2 linhas
+        ("Academia",                         180.00, 10),  # 2 pessoas
+    ]
+    variaveis = [
+        ("Supermercado",            500,  850, 15, 1.0),
+        ("Combustível",             280,  450, 20, 1.0),
+        ("Restaurantes / Delivery", 200,  500, 20, 1.0),
+        ("Farmácia",                 40,  150, 20, 1.0),
+        ("Luz / Energia elétrica",   90,  180, 12, 1.0),
+        ("Cursos online",             0,  300, 20, 0.4),
+        ("Viagens",                   0,  900, 20, 0.3),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank Casal", "nubank", "master", "5560",
+                             "#6D28D9", "#FFFFFF", 12_000, 8_500, 1, 22, agora)
+    id_it = _inserir_cartao(conn, "Itaú Click",   "itau",   "visa",   "5561",
+                             "#EC7000", "#FFFFFF",  8_000, 6_200, 15,  5, agora)
+
+    _inserir_compras(conn, [
+        (id_nu, "Móveis novo apartamento", 3_600.0, 12, -6),
+        (id_nu, "Eletrodomésticos",        2_800.0, 10, -4),
+        (id_it, "Notebook + monitor",      4_200.0, 12, -8),
+    ], hoje)
+
+    # Sem dívidas, exceto pequena
+    _inserir_dividas(conn, [
+        ("Crédito consignado (últimas parcelas)", "emprestimo", 2_400.0, 480.0, 12, 7, 10, 1.20),
+    ])
+
+    # Metas grandes — o foco do perfil
+    _inserir_metas(conn, [
+        ("Entrada apartamento (60k)",
+         60_000.0, 18_000.0, _data_offset_str(hoje, 36),
+         "Entrada de 20% num apartamento de R$ 300k"),
+        ("Casamento dos sonhos",
+         45_000.0, 12_500.0, _data_offset_str(hoje, 18),
+         "Festa para 120 convidados"),
+        ("Viagem lua de mel",
+         18_000.0, 3_200.0, _data_offset_str(hoje, 20),
+         "Europa por 15 dias"),
+        ("Reserva de emergência (6 meses)",
+         42_000.0, 22_000.0, _data_offset_str(hoje, 12),
+         "Cobrir 6 meses de despesas do casal"),
+        ("Carro novo",
+         85_000.0, 5_000.0, _data_offset_str(hoje, 48),
+         "Trocar carro atual em 4 anos"),
+    ])
+
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Aposentado clássico (INSS + complemento)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Aposentado pelo INSS (R$ 2.800). Faz bicos eventuais (R$ 400 médio).
+# Vive em casa própria quitada. Despesas controladas. Tem 1 cartão pequeno
+# pra controle. Foco: planos de saúde, farmácia, alguns prazeres simples.
+
+def _popular_aposentado_classico(conn, planos, rng, hoje) -> int:
+    # Renomeia "Salário CLT" pra representar aposentadoria (mantém campo)
+    conn.execute("UPDATE fontes_receita SET valor_mensal=2800.0, ativa=1, periodicidade='mensal' WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET valor_mensal=400.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    conn.executemany(
+        "INSERT INTO receitas_especiais (nome, mes, valor, tipo, recorrente_anual) VALUES (?,?,?,?,1)",
+        [("13º Aposentadoria", 11, 2_800.00, "clt")],
+    )
+
+    fixas = [
+        ("Internet",                          89.90, 10),
+        ("Plano de saúde",                   620.00, 15),  # alto pra idoso
+        ("Telefone / Celular",                69.90, 10),
+        ("TV por assinatura",                 65.90, 10),
+    ]
+    variaveis = [
+        ("Supermercado",            350,  550, 15, 1.0),
+        ("Farmácia",                150,  350, 20, 1.0),  # medicamentos contínuos
+        ("Combustível",             100,  200, 20, 0.7),  # pouco
+        ("Consultas / Exames",       80,  280, 20, 1.0),
+        ("Água",                     60,   95, 18, 1.0),
+        ("Luz / Energia elétrica",   80,  150, 12, 1.0),
+        ("Presentes",                 0,  250, 20, 0.4),  # netos
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank", "nubank", "master", "5570",
+                             "#6D28D9", "#FFFFFF", 2_000, 1_400, 1, 22, agora)
+    _inserir_compras(conn, [
+        (id_nu, "Óculos de grau",        900.0, 6, -4),
+        (id_nu, "Aparelho de pressão",   380.0, 4, -2),
+    ], hoje)
+
+    # Sem dívidas — disciplinado
+    _inserir_dividas(conn, [])
+
+    _inserir_metas(conn, [
+        ("Reforma sala",
+          8_000.0, 3_200.0, _data_offset_str(hoje, 12),
+         "Pintura + sofá novo"),
+        ("Viagem com netos",
+          5_000.0, 1_800.0, _data_offset_str(hoje, 18),
+         "Praia em janeiro"),
+    ])
+
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Aposentado investidor (vive de dividendos)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Aposentou cedo (FIRE). Renda principal: dividendos de FIIs + ações
+# (representada via fonte 'Dividendos' + receitas especiais mensais).
+# Carteira robusta: FIIs (renda mensal estável), ações dividend payers,
+# Tesouro IPCA pra inflação. R$ 700k investido. Casa quitada.
+
+def _popular_aposentado_investidor(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Freela / Serviço avulso'")
+    # Ativa fonte 'Dividendos' (já existe no padrão)
+    conn.execute("UPDATE fontes_receita SET valor_mensal=6500.0, ativa=1, periodicidade='mensal' WHERE nome='Dividendos / Aluguel imóveis'")
+    conn.execute("DELETE FROM receitas_especiais")
+
+    fixas = [
+        ("Internet",                          109.90, 10),
+        ("Plano de saúde",                   780.00, 15),  # premium
+        ("Telefone / Celular",                89.90, 10),
+        ("TV por assinatura",                 99.90, 10),
+        ("Streaming (Netflix, Spotify…)",     69.90, 10),
+        ("Academia",                          99.00, 10),
+    ]
+    variaveis = [
+        ("Supermercado",            500,  800, 15, 1.0),
+        ("Farmácia",                100,  280, 20, 1.0),
+        ("Combustível",             180,  350, 20, 1.0),
+        ("Restaurantes / Delivery", 180,  450, 20, 1.0),
+        ("Consultas / Exames",       60,  300, 20, 0.8),
+        ("Viagens",                   0, 1500, 20, 0.5),  # viaja
+        ("Luz / Energia elétrica",   90,  170, 12, 1.0),
+        ("Água",                     65,  110, 18, 1.0),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank Ultravioleta", "nubank", "master", "5580",
+                             "#6D28D9", "#FFFFFF", 15_000, 12_500, 1, 22, agora)
+    _inserir_compras(conn, [
+        (id_nu, "Cruzeiro Caribe",     6_800.0, 12, -7),
+        (id_nu, "Aparelho de ginástica", 1_900.0, 8, -3),
+    ], hoje)
+
+    _inserir_dividas(conn, [])
+
+    # Investimentos: carteira focada em dividendos
+    conta_inv_id = _inserir_conta_investimento(conn, "XP Investimentos", "XP", "corretora", agora)
+
+    ativos_def = [
+        # (codigo, nome, tipo, conta_id, indexador, taxa, vencimento)
+        ("HGLG11", "CSHG Logística FII",     "fii",       conta_inv_id, None, None, None),
+        ("MXRF11", "Maxi Renda FII",         "fii",       conta_inv_id, None, None, None),
+        ("KNRI11", "Kinea Renda Imob FII",   "fii",       conta_inv_id, None, None, None),
+        ("XPLG11", "XP Log FII",             "fii",       conta_inv_id, None, None, None),
+        ("ITUB4",  "Itaú Unibanco PN",       "acao",      conta_inv_id, None, None, None),
+        ("BBAS3",  "Banco do Brasil ON",     "acao",      conta_inv_id, None, None, None),
+        ("TAEE11", "Taesa UNIT",             "acao",      conta_inv_id, None, None, None),
+        ("TNLP-IPCA-35", "Tesouro IPCA+ 2035", "tesouro", conta_inv_id, "ipca", 5.80, "2035-05-15"),
+    ]
+    ativo_ids = _criar_ativos_inv(conn, ativos_def, agora)
+
+    movs = [
+        # FIIs (compras antigas + dividendos mensais)
+        ("HGLG11", "compra",    400, 155.00, -36),
+        ("HGLG11", "dividendo",   0, 3_400.00, -12),
+        ("HGLG11", "dividendo",   0, 3_500.00,  -6),
+        ("HGLG11", "dividendo",   0, 3_550.00,  -1),
+        ("MXRF11", "compra",   3000,  10.20, -36),
+        ("MXRF11", "dividendo",   0, 2_100.00, -12),
+        ("MXRF11", "dividendo",   0, 2_180.00,  -6),
+        ("MXRF11", "dividendo",   0, 2_220.00,  -1),
+        ("KNRI11", "compra",    250, 140.00, -30),
+        ("KNRI11", "dividendo",   0, 2_050.00, -12),
+        ("KNRI11", "dividendo",   0, 2_100.00,  -6),
+        ("XPLG11", "compra",    400, 105.00, -30),
+        ("XPLG11", "dividendo",   0, 1_800.00,  -6),
+        # Ações dividend payers
+        ("ITUB4",  "compra",    800,  28.00, -42),
+        ("ITUB4",  "dividendo",   0, 1_600.00, -12),
+        ("ITUB4",  "dividendo",   0, 1_650.00,  -3),
+        ("BBAS3",  "compra",    500,  42.00, -42),
+        ("BBAS3",  "dividendo",   0, 2_100.00, -12),
+        ("BBAS3",  "dividendo",   0, 2_180.00,  -3),
+        ("TAEE11", "compra",    600,  34.00, -36),
+        ("TAEE11", "dividendo",   0, 1_950.00, -12),
+        ("TAEE11", "dividendo",   0, 2_000.00,  -3),
+        # Tesouro IPCA — proteção da inflação
+        ("TNLP-IPCA-35", "aplicacao", 0, 80_000.00, -48),
+        ("TNLP-IPCA-35", "juros",     0,  4_200.00, -12),
+        ("TNLP-IPCA-35", "juros",     0,  4_400.00,  -6),
+        ("TNLP-IPCA-35", "juros",     0,  4_500.00,  -1),
+    ]
+    _inserir_movimentacoes_inv(conn, rng, hoje, ativo_ids, movs)
+    _recalcular_posicoes_demo(conn, ativo_ids)
+
+    _inserir_metas(conn, [
+        ("Atingir R$ 1M investido",
+         1_000_000.0, 720_000.0, _data_offset_str(hoje, 48),
+         "Carteira aposentadoria"),
+    ])
+
+    return total
+
+
+def _inserir_conta_investimento(conn, nome: str, instituicao: str,
+                                  tipo: str, agora: str) -> int:
+    """Helper enxuto para criar conta de investimento."""
+    cur = conn.execute(
+        "INSERT INTO contas_investimento (nome, instituicao, tipo, ativa, criado_em)"
+        " VALUES (?, ?, ?, 1, ?)",
+        (nome, instituicao, tipo, agora),
+    )
+    return cur.lastrowid
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Entry point público
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1836,6 +2088,9 @@ _PERFIL_FNS = {
     # Profissionais/vida
     "profissional_informal":   _popular_profissional_informal,
     "prestador_servico":       _popular_prestador_servico,
+    "casal_planejando":        _popular_casal_planejando,
+    "aposentado_classico":     _popular_aposentado_classico,
+    "aposentado_investidor":   _popular_aposentado_investidor,
 }
 
 
