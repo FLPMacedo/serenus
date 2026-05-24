@@ -21,7 +21,7 @@
 🎬 PRÓXIMO: Ep 06 — ⭐ IMPORTAR FATURA PDF de 7 bancos: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 #Serenus #CartaoDeCredito #ControleDeCartao #UaiScript
 ```

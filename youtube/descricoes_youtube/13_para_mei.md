@@ -23,7 +23,7 @@
 🎬 PRÓXIMO: Ep 14 — Backup e Segurança: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 📲 COMPARTILHA com aquele MEI que ainda usa caderneta!
 

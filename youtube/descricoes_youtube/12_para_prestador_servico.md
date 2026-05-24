@@ -27,7 +27,7 @@
 🎬 PRÓXIMO: Ep 13 — Pra MEI dono de loja: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 📲 COMPARTILHA esse vídeo com aquele técnico/prestador amigo!
 

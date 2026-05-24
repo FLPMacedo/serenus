@@ -79,7 +79,7 @@ Material gerado pra versão **v2.3.0** do Serenus.
 Quem quiser apoiar o projeto pode mandar PIX pra:
 
 ```
-<SEU_EMAIL_PIX>
+filipemarquesmacedo12@gmail.com
 ```
 
 (Veja `DONATIVOS_E_PIX.md` para o texto completo a usar nas descrições.)

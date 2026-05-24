@@ -27,7 +27,7 @@
 🎬 PRÓXIMO: Ep 08 — Lançamentos manuais: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 #Serenus #ExtratoBancário #ConciliaçãoBancária #Nubank #Itau #ImportarExtrato #UaiScript
 ```

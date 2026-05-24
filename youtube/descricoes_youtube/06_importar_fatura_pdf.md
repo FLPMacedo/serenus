@@ -30,7 +30,7 @@
 🎬 PRÓXIMO: Ep 07 — ⭐ Conciliação Bancária CSV/OFX/PDF: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 #Serenus #ImportarFatura #FaturaPDF #Nubank #Itau #Credicard #Digio #WillBank #MercadoPago #UaiScript
 ```

@@ -35,7 +35,7 @@ Tudo do Serenus fica em: %APPDATA%\Serenus\
 ▶ <URL_PLAYLIST>
 
 ❤️ APOIE (PIX):
-📩 <SEU_EMAIL_PIX>
+📩 filipemarquesmacedo12@gmail.com
 
 🔗 LINKS:
 • GitHub: https://github.com/FLPMacedo/serenus

@@ -30,7 +30,7 @@
 
 🎬 PLAYLIST COMPLETA (17 episódios): <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 Obrigado por ter chegado até aqui! Se viu todos os 17 vídeos, você sabe o Serenus melhor que 99% dos usuários.
 

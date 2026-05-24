@@ -22,7 +22,7 @@
 🎬 PRÓXIMO: Ep 05 — Cartões de Crédito: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 #Serenus #Receitas #Despesas #ControleFinanceiro #UaiScript
 ```

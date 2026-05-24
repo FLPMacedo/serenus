@@ -18,7 +18,7 @@
 🎬 PRÓXIMO: Ep 04 — Receitas e Despesas: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 #Serenus #PrimeirosPassos #ModoDemo #UaiScript
 ```

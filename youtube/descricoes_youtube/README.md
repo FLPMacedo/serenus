@@ -13,26 +13,32 @@ Cada descrição segue o template definido em `youtube/templates/modelo_descrica
 6. **Substitua os marcadores** `<URL...>` pelos links reais quando tiver:
    - `<URL_PROXIMO_VIDEO>` → URL do próximo vídeo da série
    - `<URL_PLAYLIST>` → URL da playlist "Aprenda o Serenus"
-7. Adicione as tags (estão no fim da descrição, separadas)
+7. Adicione as tags (estão no fim de cada arquivo, em bloco separado)
 8. Publique
 
-## Placeholder `<SEU_EMAIL_PIX>`
+## Chave PIX
 
-Todas as descrições usam o placeholder `<SEU_EMAIL_PIX>` pro PIX.
+Todas as descrições já têm a chave PIX preenchida:
 
-Substitua **TUDO de uma vez** com este comando no terminal:
+```
+filipemarquesmacedo12@gmail.com
+```
+
+Se você quiser MUDAR a chave PIX no futuro, rode este comando no terminal:
 
 ```bash
-cd youtube/descricoes_youtube
 # Linux/Mac/Git Bash:
-find . -name "*.md" -exec sed -i 's/<SEU_EMAIL_PIX>/seu_email@exemplo.com/g' {} +
+cd <raiz do projeto>
+find youtube docs/MANUAL_DEMOS.md -name "*.md" \
+  -exec sed -i 's/filipemarquesmacedo12@gmail.com/nova_chave@email.com/g' {} +
 
 # Ou no PowerShell:
-Get-ChildItem *.md | ForEach-Object {
-    (Get-Content $_.FullName) -replace '<SEU_EMAIL_PIX>', 'seu_email@exemplo.com' |
+Get-ChildItem -Recurse youtube -Filter *.md | ForEach-Object {
+    (Get-Content $_.FullName) -replace 'filipemarquesmacedo12@gmail.com', 'nova_chave@email.com' |
     Set-Content $_.FullName
 }
 ```
 
-Não esqueça de fazer o mesmo no `youtube/README.md`, `youtube/DONATIVOS_E_PIX.md`
-e `youtube/redes_sociais/`.
+Não esqueça de fazer o mesmo no `youtube/README.md`, `youtube/DONATIVOS_E_PIX.md`,
+`youtube/templates/modelo_descricao_youtube.md` e arquivos de `youtube/redes_sociais/`
+se houver.

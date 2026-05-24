@@ -35,7 +35,7 @@ https://github.com/FLPMacedo/serenus/releases
 ▶ <URL_PLAYLIST>
 
 ❤️ APOIE O PROJETO (PIX):
-📩 <SEU_EMAIL_PIX>
+📩 filipemarquesmacedo12@gmail.com
 
 🔗 LINKS:
 • GitHub: https://github.com/FLPMacedo/serenus

@@ -33,7 +33,7 @@ instalador (pasta `docs/` após instalação).
 O Serenus é 100% gratuito e sempre será. Se ele te ajudou e você quer
 apoiar a continuidade do projeto, mande qualquer valor via PIX:
 
-📩 CHAVE PIX (email): <SEU_EMAIL_PIX>
+📩 CHAVE PIX (email): filipemarquesmacedo12@gmail.com
 
 Toda contribuição é reinvestida em novos recursos, suporte a mais
 bancos e tutoriais como este.

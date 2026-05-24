@@ -1,7 +1,7 @@
 # Donativos via PIX — Textos prontos
 
 > Cole esses textos nas descrições, comentários fixados e posts.
-> Substitua `<SEU_EMAIL_PIX>` pelo email da sua chave PIX.
+> Chave PIX já preenchida (email `filipemarquesmacedo12@gmail.com`).
 
 ---
 
@@ -9,7 +9,7 @@
 
 ```
 ❤️  Se o Serenus te ajudou, considere apoiar com qualquer valor via PIX:
-    📩  <SEU_EMAIL_PIX>
+    📩  filipemarquesmacedo12@gmail.com
 ```
 
 ---
@@ -25,7 +25,7 @@ O Serenus é gratuito e vai continuar sendo. Sem mensalidade, sem
 Mas se ele te ajudou de verdade a organizar suas finanças, considere
 apoiar o projeto com qualquer valor via PIX:
 
-📩  CHAVE PIX (email): <SEU_EMAIL_PIX>
+📩  CHAVE PIX (email): filipemarquesmacedo12@gmail.com
 
 Toda contribuição financia novos recursos (suporte a mais bancos, 
 melhorias de UI, vídeos como esse). Obrigado!
@@ -54,7 +54,7 @@ caixa, investimentos, metas, vendas e ordens de serviço.
 Decidi abrir e fazer vídeos pra que outras pessoas possam usar também.
 
 💝 SE QUISER APOIAR:
-   PIX (email): <SEU_EMAIL_PIX>
+   PIX (email): filipemarquesmacedo12@gmail.com
 
 Qualquer valor ajuda — e tudo é reinvestido no projeto (novos
 recursos, mais tutoriais, suporte a mais bancos).

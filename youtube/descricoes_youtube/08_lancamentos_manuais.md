@@ -24,7 +24,7 @@ NÃO entram na Visão Futura (são avulsos por natureza).
 🎬 PRÓXIMO: Ep 09 — Dívidas + Projeção 5 anos: <URL_PROXIMO_VIDEO>
 🎬 PLAYLIST: <URL_PLAYLIST>
 
-❤️ APOIE (PIX): 📩 <SEU_EMAIL_PIX>
+❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
 
 #Serenus #LançamentoManual #ControleDeGastos #UaiScript
 ```

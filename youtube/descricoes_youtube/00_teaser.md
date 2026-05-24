@@ -22,7 +22,7 @@ https://github.com/FLPMacedo/serenus/releases
 🔔 Se inscreve pra não perder nenhum episódio.
 
 ❤️ APOIE O PROJETO (PIX):
-📩 <SEU_EMAIL_PIX>
+📩 filipemarquesmacedo12@gmail.com
 
 O Serenus é 100% gratuito e continuará sendo. Toda contribuição via PIX vai pra desenvolvimento de novos recursos.
 
