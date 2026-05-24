@@ -21,6 +21,8 @@ class LinhaExtrato:
     saldo:     float  # saldo acumulado até esta linha
     tipo:      str    # "receita" | "despesa"
     status:    str    # "pago" | "pendente" | "cancelado" | ""
+    origem:    str = ""           # "" (automático) | "manual" | "venda" | …
+    origem_id: int | None = None  # id na tabela da origem (pra editar/excluir)
 
 
 def _creditos_mes(mes: int, ano: int) -> list[dict]:
@@ -153,6 +155,35 @@ def _creditos_vendas_mes(mes: int, ano: int) -> list[dict]:
     return linhas
 
 
+def _lancamentos_manuais_mes(mes: int, ano: int) -> list[dict]:
+    """Carrega lançamentos manuais do mês como linhas do extrato.
+
+    Cada linha vem marcada com origem='manual' e origem_id, pra que a view
+    possa permitir editar/excluir só esses lançamentos (sem mexer no resto).
+    """
+    from views.fluxo_caixa.lancamento_manual_model import listar_lancamentos_mes
+    linhas = []
+    for lm in listar_lancamentos_mes(mes, ano):
+        if lm.tipo == "entrada":
+            credito, debito = lm.valor, 0.0
+            tipo = "receita"
+        else:
+            credito, debito = 0.0, lm.valor
+            tipo = "despesa"
+        linhas.append({
+            "data":      lm.data,
+            "descricao": lm.descricao,
+            "categoria": lm.nome_categoria or "Manual",
+            "debito":    debito,
+            "credito":   credito,
+            "tipo":      tipo,
+            "status":    "pago",  # manual já é fato consumado
+            "origem":    "manual",
+            "origem_id": lm.id,
+        })
+    return linhas
+
+
 def extrato_mes(mes: int, ano: int) -> list[LinhaExtrato]:
     """
     Retorna as linhas do extrato do mês ordenadas por data.
@@ -163,6 +194,7 @@ def extrato_mes(mes: int, ano: int) -> list[LinhaExtrato]:
         + _creditos_investimento_mes(mes, ano)
         + _creditos_vendas_mes(mes, ano)
         + _debitos_mes(mes, ano)
+        + _lancamentos_manuais_mes(mes, ano)
     )
 
     # Ordena: por data, créditos antes de débitos no mesmo dia
@@ -181,6 +213,8 @@ def extrato_mes(mes: int, ano: int) -> list[LinhaExtrato]:
             saldo     = round(saldo, 2),
             tipo      = r["tipo"],
             status    = r["status"],
+            origem    = r.get("origem", ""),
+            origem_id = r.get("origem_id"),
         ))
 
     return resultado

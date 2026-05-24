@@ -93,6 +93,12 @@ class ExtratoCaixaView(ctk.CTkFrame):
             command=self._exportar_excel,
         ).pack(side="left", padx=(8, 0))
 
+        ctk.CTkButton(
+            nav, text="+  Lançar", width=86, height=32,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            command=self._novo_lancamento,
+        ).pack(side="left", padx=(8, 0))
+
     # ------------------------------------------------------------------
     # Cards de resumo
     # ------------------------------------------------------------------
@@ -212,6 +218,11 @@ class ExtratoCaixaView(ctk.CTkFrame):
         row = ctk.CTkFrame(self._scroll, fg_color=bg, corner_radius=5)
         row.pack(fill="x", pady=1)
 
+        # Duplo-clique abre o modal de edição se origem='manual'
+        if l.origem == "manual" and l.origem_id is not None:
+            row.bind("<Double-Button-1>",
+                     lambda e, lid=l.origem_id: self._editar_lancamento(lid))
+
         # Data formatada DD/MM
         partes = l.data.split("-")
         data_fmt = f"{partes[2]}/{partes[1]}" if len(partes) == 3 else l.data
@@ -243,12 +254,16 @@ class ExtratoCaixaView(ctk.CTkFrame):
                 cor_txt = cores["texto_mudo"] if texto == "—" else cores["texto"]
 
             bold = col_i == 5
-            ctk.CTkLabel(
+            cell = ctk.CTkLabel(
                 row, text=texto, width=larg, anchor=anchor,
                 font=ctk.CTkFont(size=11, weight="bold" if bold else "normal"),
                 text_color=cor_txt,
-            ).grid(row=0, column=col_i, padx=6, pady=5,
-                   sticky=anchor)
+            )
+            cell.grid(row=0, column=col_i, padx=6, pady=5, sticky=anchor)
+            # Propaga o duplo-clique das células para o row inteiro
+            if l.origem == "manual" and l.origem_id is not None:
+                cell.bind("<Double-Button-1>",
+                          lambda e, lid=l.origem_id: self._editar_lancamento(lid))
 
     # ------------------------------------------------------------------
     # Navegação de mês
@@ -291,3 +306,24 @@ class ExtratoCaixaView(ctk.CTkFrame):
             exportar_extrato_xlsx(self._mes, self._ano, caminho)
             import tkinter.messagebox as mb
             mb.showinfo("Exportado", f"Extrato salvo em:\n{caminho}")
+
+    # ------------------------------------------------------------------
+    # Lançamentos manuais
+    # ------------------------------------------------------------------
+
+    def _novo_lancamento(self):
+        from views.fluxo_caixa.form_lancamento_manual import FormLancamentoManualModal
+        FormLancamentoManualModal(self, on_salvo=self._on_lancamento_salvo)
+
+    def _editar_lancamento(self, lanc_id: int):
+        from views.fluxo_caixa.form_lancamento_manual import FormLancamentoManualModal
+        from views.fluxo_caixa.lancamento_manual_model import obter_lancamento
+        lanc = obter_lancamento(lanc_id)
+        if not lanc:
+            return
+        FormLancamentoManualModal(
+            self, on_salvo=self._on_lancamento_salvo, lancamento=lanc,
+        )
+
+    def _on_lancamento_salvo(self, msg: str):
+        self._carregar()

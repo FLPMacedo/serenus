@@ -336,6 +336,23 @@ def inicializar_banco():
             nome      TEXT    NOT NULL UNIQUE,
             criado_em TEXT    NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS lancamentos_manuais (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            data             TEXT    NOT NULL,
+            descricao        TEXT    NOT NULL,
+            tipo             TEXT    NOT NULL CHECK(tipo IN ('entrada', 'saida')),
+            plano_conta_id   INTEGER REFERENCES plano_contas(id),
+            fonte_receita_id INTEGER REFERENCES fontes_receita(id),
+            valor            REAL    NOT NULL CHECK(valor > 0),
+            observacao       TEXT,
+            criado_em        TEXT    NOT NULL,
+            CHECK (
+                (tipo = 'entrada' AND fonte_receita_id IS NOT NULL AND plano_conta_id IS NULL)
+                OR
+                (tipo = 'saida'   AND plano_conta_id IS NOT NULL AND fonte_receita_id IS NULL)
+            )
+        );
     """)
 
     conn.commit()
