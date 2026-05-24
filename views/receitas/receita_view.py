@@ -705,6 +705,34 @@ class FonteFormModal(ctk.CTkToplevel):
             self._entry_fgts_val.pack(anchor="w", pady=(2, 8))
             self._entry_fgts_val.bind("<KeyRelease>", lambda e: mascara_moeda(self._entry_fgts_val))
 
+            # ── Opcionais: 13º Salário e Férias (valores zerados, user edita)
+            self._criar_13_var = ctk.BooleanVar(value=False)
+            ctk.CTkCheckBox(fd, text="Criar entrada de 13º Salário (em Dezembro)",
+                            variable=self._criar_13_var).pack(anchor="w", pady=(8, 4))
+
+            self._criar_ferias_var = ctk.BooleanVar(value=False)
+            ctk.CTkCheckBox(fd, text="Criar entrada de Férias + 1/3",
+                            variable=self._criar_ferias_var,
+                            command=self._toggle_ferias).pack(anchor="w", pady=(0, 4))
+
+            self._frame_ferias = ctk.CTkFrame(fd, fg_color="transparent")
+            self._lbl(self._frame_ferias, "Mês das férias")
+            self._combo_mes_ferias = ctk.CTkComboBox(
+                self._frame_ferias, values=NOMES_MESES, state="readonly", width=160
+            )
+            self._combo_mes_ferias.set(NOMES_MESES[5])  # Junho como sugestão
+            self._combo_mes_ferias.pack(anchor="w", pady=(2, 8))
+
+            # Nota explicativa
+            ctk.CTkLabel(
+                fd,
+                text="ℹ Entradas criadas com valor R$ 0,00 — edite na aba\n"
+                     "  'Receitas Especiais' com o valor real do seu ano.",
+                font=ctk.CTkFont(size=10),
+                text_color=self._cores["texto_mudo"],
+                justify="left",
+            ).pack(anchor="w", pady=(4, 4))
+
         elif tipo in ("aluguel",):
             self._lbl(fd, "Dia do recebimento")
             self._entry_dia = ctk.CTkEntry(fd, placeholder_text="Ex: 10", width=100)
@@ -729,6 +757,13 @@ class FonteFormModal(ctk.CTkToplevel):
             self._frame_fgts.pack(fill="x", pady=(0, 8))
         else:
             self._frame_fgts.pack_forget()
+
+    def _toggle_ferias(self):
+        """Mostra/esconde o seletor de mês das férias conforme o checkbox."""
+        if self._criar_ferias_var.get():
+            self._frame_ferias.pack(fill="x", pady=(0, 4))
+        else:
+            self._frame_ferias.pack_forget()
 
     # ------------------------------------------------------------------
     # Dados
@@ -820,16 +855,31 @@ class FonteFormModal(ctk.CTkToplevel):
         fonte_id = self._fonte.id if self._fonte else None
         novo_id = salvar_fonte(dados, id=fonte_id)
 
-        # Gera receitas especiais automaticamente para CLT novo
+        # Gera receitas especiais SÓ pra o que o usuário marcou.
+        # Valores ficam ZERADOS — o usuário edita na aba "Receitas Especiais"
+        # com o valor real (proporcionalidade, ano-base, descontos, etc).
         if tipo == "clt" and not self._fonte:
-            _gerar_especiais_clt(
-                fonte_id      = novo_id,
-                nome_fonte    = nome,
-                salario       = valor,
-                fgts          = dados.get("fgts_aniversario", False),
-                fgts_mes      = dados.get("fgts_mes"),
-                fgts_valor    = dados.get("fgts_valor"),
-            )
+            criar_13 = getattr(self, "_criar_13_var", ctk.BooleanVar()).get()
+            criar_ferias = getattr(self, "_criar_ferias_var", ctk.BooleanVar()).get()
+            mes_ferias = 5  # default Junho
+            if criar_ferias and hasattr(self, "_combo_mes_ferias"):
+                try:
+                    mes_ferias = NOMES_MESES.index(self._combo_mes_ferias.get())
+                except ValueError:
+                    mes_ferias = 5
+
+            # Só chama se o user marcou algo (evita query desnecessária)
+            if criar_13 or criar_ferias or dados.get("fgts_aniversario"):
+                _gerar_especiais_clt(
+                    fonte_id      = novo_id,
+                    nome_fonte    = nome,
+                    criar_13      = criar_13,
+                    criar_ferias  = criar_ferias,
+                    mes_ferias    = mes_ferias,
+                    fgts          = dados.get("fgts_aniversario", False),
+                    fgts_mes      = dados.get("fgts_mes"),
+                    fgts_valor    = dados.get("fgts_valor"),
+                )
 
         self.destroy()
         self._on_salvo()

@@ -191,14 +191,24 @@ def excluir_receita_especial(id: int):
 
 
 def _gerar_especiais_clt(fonte_id: int, nome_fonte: str,
-                          salario: float, fgts: bool,
-                          fgts_mes: Optional[int], fgts_valor: Optional[float]):
+                          criar_13: bool = False,
+                          criar_ferias: bool = False,
+                          mes_ferias: int = 5,
+                          fgts: bool = False,
+                          fgts_mes: Optional[int] = None,
+                          fgts_valor: Optional[float] = None):
     """
-    Ao cadastrar fonte CLT gera automaticamente:
-    - 13º Salário em dezembro (mês 11)
-    - Férias + 1/3 em junho (mês 5)
-    - FGTS aniversário se marcado
-    Não duplica se já existir receita especial com o mesmo nome.
+    Cria receitas especiais associadas a uma fonte CLT recém-cadastrada,
+    APENAS pra cada item que o usuário marcou explicitamente:
+
+    - criar_13       → 13º Salário em dezembro (mês 11), VALOR ZERADO
+    - criar_ferias   → Férias + 1/3 no mês escolhido (default junho), VALOR ZERADO
+    - fgts (+ params) → FGTS aniversário (mantém valor informado)
+
+    Valores zerados forçam o usuário a editar conforme a realidade
+    (proporcionalidade, salário do ano-base, descontos, etc).
+
+    Não duplica entradas com mesmo nome.
     """
     with conectar() as conn:
         existentes = {
@@ -210,15 +220,16 @@ def _gerar_especiais_clt(fonte_id: int, nome_fonte: str,
     nome_13 = f"13º Salário — {nome_fonte}"
     nome_ferias = f"Férias + 1/3 — {nome_fonte}"
 
-    if nome_13 not in existentes:
+    if criar_13 and nome_13 not in existentes:
         to_create.append({
             "nome": nome_13, "mes": 11,
-            "valor": salario, "tipo": "clt", "recorrente_anual": True,
+            "valor": 0.0,  # zerado — usuário edita
+            "tipo": "clt", "recorrente_anual": True,
         })
-    if nome_ferias not in existentes:
+    if criar_ferias and nome_ferias not in existentes:
         to_create.append({
-            "nome": nome_ferias, "mes": 5,
-            "valor": round(salario * 4 / 3, 2),  # salário + 1/3
+            "nome": nome_ferias, "mes": int(mes_ferias),
+            "valor": 0.0,  # zerado — usuário edita
             "tipo": "clt", "recorrente_anual": True,
         })
     if fgts and fgts_mes is not None and fgts_valor:
