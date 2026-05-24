@@ -201,6 +201,77 @@ def _inserir_dividas(conn, dividas: list[tuple]):
     )
 
 
+def _inserir_clientes(conn, clientes: list[tuple]) -> dict[str, int]:
+    """Insere clientes. Retorna {nome: id}.
+    Tuple: (nome, documento, telefone, email)
+    """
+    agora = _agora()
+    ids: dict[str, int] = {}
+    for nome, doc, tel, email in clientes:
+        cur = conn.execute(
+            "INSERT INTO clientes (nome, documento, telefone, whatsapp, email,"
+            " cep, endereco, observacao, criado_em)"
+            " VALUES (?, ?, ?, ?, ?, '', '', '', ?)",
+            (nome, doc, tel, tel, email, agora),
+        )
+        ids[nome] = cur.lastrowid
+    return ids
+
+
+def _inserir_os(conn, oses: list[tuple], hoje: date,
+                 clientes_ids: dict[str, int],
+                 produtos_ids: dict[str, int]) -> int:
+    """Insere ordens de serviço com itens.
+
+    Cada tuple:
+      (numero, cliente_nome, descricao_servico, status, offset_dias,
+       valor_hora, horas_trabalhadas, itens)
+        - itens: list[(nome_produto, quantidade, preco_unit)]
+                 nome_produto deve estar em produtos_ids; senão item ad-hoc.
+        - status: 'aberta' | 'em_andamento' | 'aguardando_peca' |
+                  'concluida' | 'cancelada'
+        - offset_dias: negativo = passado (data_solicitacao)
+
+    Retorna número de OS inseridas.
+    """
+    from datetime import timedelta
+    agora = _agora()
+    inseridas = 0
+
+    for numero, cli_nome, desc, status, off, vh, ht, itens in oses:
+        data_sol = (hoje + timedelta(days=off)).isoformat()
+        # data_execucao: definida só se já executou (concluida/em_andamento/aguardando_peca)
+        if status in ("concluida", "aguardando_peca"):
+            data_exec = (hoje + timedelta(days=off + 2)).isoformat()
+        elif status == "em_andamento":
+            data_exec = (hoje + timedelta(days=off + 1)).isoformat()
+        else:
+            data_exec = None
+
+        cli_id = clientes_ids.get(cli_nome)
+        cur = conn.execute(
+            "INSERT INTO ordens_servico (numero, cliente_id, solicitante_nome,"
+            " data_solicitacao, data_execucao, descricao_servico, status,"
+            " valor_hora, horas_trabalhadas, criado_em)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (numero, cli_id, cli_nome or "", data_sol, data_exec, desc,
+             status, vh, ht, agora),
+        )
+        os_id = cur.lastrowid
+
+        for nome_prod, qtd, preco in itens:
+            prod_id = produtos_ids.get(nome_prod)
+            subtotal = round(qtd * preco, 2)
+            conn.execute(
+                "INSERT INTO itens_os (os_id, produto_id, descricao, quantidade,"
+                " preco_unit, subtotal, observacao, criado_em)"
+                " VALUES (?, ?, ?, ?, ?, ?, '', ?)",
+                (os_id, prod_id, nome_prod, qtd, preco, subtotal, agora),
+            )
+        inseridas += 1
+    return inseridas
+
+
 def _inserir_produtos(conn, produtos: list[tuple]) -> dict[str, int]:
     """Insere produtos/serviços. Retorna {nome: id}.
     Tuple: (nome, tipo, preco, descricao)
@@ -1595,6 +1666,154 @@ def _popular_profissional_informal(conn, planos, rng, hoje) -> int:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Prestador de serviço (eletricista)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Eletricista autônomo. Sem CLT. Renda 100% de vendas + OS.
+# Tem 6 clientes cadastrados (residencial + comercial), catálogo com
+# 14 itens (mão-de-obra + materiais). 14 vendas em 6 meses, 6 OS em
+# status variados. Despesas altas: combustível + materiais.
+#
+# Único perfil que demonstra integração: Clientes ↔ OS ↔ Produtos ↔ Vendas.
+
+def _popular_prestador_servico(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET valor_mensal=1500.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 1_200.00, 5),
+        ("Internet",                          99.90, 10),
+        ("Plano de saúde",                   240.00, 15),
+        ("Telefone / Celular",                99.90, 10),
+        ("Seguro veículo",                   220.00, 20),  # carro de trabalho
+    ]
+    variaveis = [
+        ("Supermercado",            450,  700, 15, 1.0),
+        ("Combustível",             450,  750, 20, 1.0),  # alto (trabalho rua)
+        ("Manutenção veículo",        0,  600, 20, 0.6),
+        ("Restaurantes / Delivery",  60,  200, 20, 1.0),
+        ("Água",                     55,  100, 18, 1.0),
+        ("Luz / Energia elétrica",   90,  180, 12, 1.0),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank", "nubank", "master", "5550",
+                             "#6D28D9", "#FFFFFF", 3_500, 2_100, 1, 22, agora)
+    _inserir_compras(conn, [
+        (id_nu, "Multímetro profissional Fluke", 1_400.0, 10, -7),
+        (id_nu, "Furadeira Bosch",                 950.0,  6, -4),
+        (id_nu, "Caixa de ferramentas Tramontina", 480.0,  6, -2),
+    ], hoje)
+
+    _inserir_dividas(conn, [
+        ("Financ. carro Fiat Uno (trabalho)", "financiamento", 12_000.0, 600.0, 24, 8, 10, 1.40),
+    ])
+
+    # ── Clientes ───────────────────────────────────────────────────────────
+    clientes_ids = _inserir_clientes(conn, [
+        # (nome, documento, telefone, email)
+        ("João da Silva (Residencial)",        "111.111.111-11", "(31) 98888-1111", "joao@email.com"),
+        ("Maria Souza (Residencial)",          "222.222.222-22", "(31) 98888-2222", "maria@email.com"),
+        ("Pedro Oliveira (Residencial)",       "333.333.333-33", "(31) 98888-3333", "pedro@email.com"),
+        ("Padaria Pão Quente Ltda",            "12.345.678/0001-90", "(31) 3333-4444", "contato@paoquente.com.br"),
+        ("Mercadinho Boa Vista",               "23.456.789/0001-80", "(31) 3333-5555", "compras@boavista.com.br"),
+        ("Ana Costa (Residencial)",            "444.444.444-44", "(31) 98888-4444", "ana@email.com"),
+    ])
+
+    # ── Catálogo de produtos/serviços ─────────────────────────────────────
+    produtos_ids = _inserir_produtos(conn, [
+        # (nome, tipo, preco, descricao)
+        ("Mão de obra eletricista (hora)",        "servico", 80.00, "Hora trabalhada"),
+        ("Instalação de tomada simples",          "servico", 60.00, "Por ponto"),
+        ("Instalação de luminária",               "servico", 90.00, "Por ponto"),
+        ("Troca de disjuntor",                    "servico", 120.00, "Por disjuntor"),
+        ("Vistoria elétrica completa",            "servico", 250.00, "Diagnóstico"),
+        ("Disjuntor monopolar 20A",               "produto", 22.00, "Tramontina"),
+        ("Tomada 2P+T 10A",                       "produto",  9.50, "Steck"),
+        ("Cabo flexível 2,5mm (m)",               "produto",  2.80, "Sil"),
+        ("Lâmpada LED 12W",                       "produto", 18.00, "Bulbo E27"),
+        ("Luminária plafon LED redonda",          "produto", 65.00, "30cm"),
+        ("Chuveiro Lorenzetti Acqua Star",        "produto", 145.00, "Eletrônico"),
+        ("Quadro de distribuição 12 disjuntores", "produto", 180.00, "PVC sobrepor"),
+        ("Fita isolante 20m",                     "produto", 12.00, "3M Scotch"),
+        ("Conector emenda 2,5mm (caixa)",         "produto", 25.00, "100 unidades"),
+    ])
+
+    # ── Vendas (balcão/à vista e fiados) ──────────────────────────────────
+    _inserir_vendas(conn, [
+        # (descricao, total, tipo, off, n_parc, [produto_ids])
+        ("Venda materiais Padaria Pão Quente",      450.00, "avista", -6, 1, [produtos_ids.get("Disjuntor monopolar 20A")]),
+        ("Lote lâmpadas LED + tomadas",             380.00, "avista", -5, 1, []),
+        ("Cabo flexível 50m + conectores",          165.00, "avista", -5, 1, []),
+        ("Troca disjuntor + mão de obra",           220.00, "avista", -4, 1, []),
+        ("Quadro de distribuição completo",         620.00, "aprazo", -4, 2, []),
+        ("Chuveiro + instalação",                   280.00, "avista", -3, 1, []),
+        ("Vistoria + correções João Silva",         450.00, "avista", -3, 1, []),
+        ("Reforma elétrica Mercadinho (parcial)", 1_800.00, "aprazo", -2, 3, []),
+        ("Lote materiais Ana Costa",                340.00, "avista", -2, 1, []),
+        ("Luminária + lâmpadas Pedro",              280.00, "avista", -1, 1, []),
+        ("Troca de fiação parcial Maria",           650.00, "aprazo", -1, 2, []),
+        ("Material elétrico balcão",                190.00, "avista",  0, 1, []),
+        ("Vistoria completa Padaria",               250.00, "avista",  0, 1, []),
+        ("Instalação 4 luminárias",                 360.00, "avista",  0, 1, []),
+    ], hoje)
+
+    # ── Ordens de Serviço ─────────────────────────────────────────────────
+    _inserir_os(conn, [
+        # (numero, cliente_nome, descricao, status, off_dias, valor_hora, horas, itens)
+        ("OS-0001", "Padaria Pão Quente Ltda",
+         "Troca completa do quadro de distribuição + instalação de 6 tomadas",
+         "concluida", -45, 80.0, 8.0, [
+            ("Quadro de distribuição 12 disjuntores", 1, 180.00),
+            ("Disjuntor monopolar 20A", 6, 22.00),
+            ("Tomada 2P+T 10A", 6, 9.50),
+            ("Cabo flexível 2,5mm (m)", 30, 2.80),
+        ]),
+        ("OS-0002", "Maria Souza (Residencial)",
+         "Vistoria elétrica completa + relatório técnico",
+         "concluida", -30, 80.0, 3.0, [
+            ("Vistoria elétrica completa", 1, 250.00),
+        ]),
+        ("OS-0003", "Mercadinho Boa Vista",
+         "Reforma elétrica parcial — área dos refrigeradores",
+         "em_andamento", -10, 80.0, 6.0, [
+            ("Disjuntor monopolar 20A", 4, 22.00),
+            ("Cabo flexível 2,5mm (m)", 40, 2.80),
+            ("Tomada 2P+T 10A", 8, 9.50),
+        ]),
+        ("OS-0004", "Pedro Oliveira (Residencial)",
+         "Troca de 3 luminárias + lâmpadas LED",
+         "aguardando_peca", -5, 80.0, 0.0, [
+            ("Luminária plafon LED redonda", 3, 65.00),
+            ("Lâmpada LED 12W", 3, 18.00),
+        ]),
+        ("OS-0005", "Ana Costa (Residencial)",
+         "Conserto curto-circuito cozinha + revisão geral",
+         "aberta", -2, 80.0, 0.0, [
+            ("Vistoria elétrica completa", 1, 250.00),
+        ]),
+        ("OS-0006", "João da Silva (Residencial)",
+         "Instalação de chuveiro elétrico novo",
+         "aberta", 0, 80.0, 0.0, [
+            ("Chuveiro Lorenzetti Acqua Star", 1, 145.00),
+        ]),
+    ], hoje, clientes_ids, produtos_ids)
+
+    _inserir_metas(conn, [
+        ("Comprar van para trabalho",
+         45_000.0, 8_200.0, _data_offset_str(hoje, 24),
+         "Trocar carro de passeio por van utilitária"),
+        ("Reserva de emergência (3 meses)",
+         10_000.0, 3_400.0, _data_offset_str(hoje, 12),
+         "Cobrir despesas em meses fracos"),
+    ])
+
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Entry point público
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1616,6 +1835,7 @@ _PERFIL_FNS = {
     "patrimonio_crescendo":    _popular_patrimonio_crescendo,
     # Profissionais/vida
     "profissional_informal":   _popular_profissional_informal,
+    "prestador_servico":       _popular_prestador_servico,
 }
 
 
