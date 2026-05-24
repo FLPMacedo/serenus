@@ -34,8 +34,12 @@ from views.cartoes.pdf_parsers.base import PDFParser
 log = logging.getLogger(__name__)
 
 
-# Marcador único do Nubank no texto da fatura
-_MARCADOR_NUBANK = re.compile(r"Nu Pagamentos", re.IGNORECASE)
+# Marcador único do Nubank no texto da fatura.
+# IMPORTANTE: precisa ser "Nu Pagamentos S.A." (CNPJ do emissor) e não só
+# "Nu Pagamentos" porque outras faturas (Magazine Luiza/Luizacred) listam
+# transações tipo "PIX NU PAGAMENTOS" como estabelecimento, causando
+# falso-positivo no detect_layout.
+_MARCADOR_NUBANK = re.compile(r"Nu\s+Pagamentos\s+S\.?\s*A\.?", re.IGNORECASE)
 
 # Cabeçalho da seção de transações
 _INICIO_TRANSACOES = re.compile(r"TRANSAÇÕES DE\s+\d", re.IGNORECASE)

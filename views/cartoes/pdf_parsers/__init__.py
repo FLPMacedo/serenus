@@ -14,14 +14,29 @@ Uso:
 from __future__ import annotations
 
 from views.cartoes.pdf_parsers.base import PDFParser
+from views.cartoes.pdf_parsers.digio import DigioParser
 from views.cartoes.pdf_parsers.generico import GenericoParser
 from views.cartoes.pdf_parsers.itau import ItauParser
+from views.cartoes.pdf_parsers.luizacred import LuizacredParser
+from views.cartoes.pdf_parsers.mercadolivre import MercadoLivreParser
 from views.cartoes.pdf_parsers.nubank import NubankParser
+from views.cartoes.pdf_parsers.will import WillParser
 
 
 # Lista mutável de parsers em ordem de prioridade.
 # Parsers específicos primeiro; o GenericoParser é o último (fallback).
-_PARSERS: list[PDFParser] = [NubankParser(), ItauParser(), GenericoParser()]
+# IMPORTANTE: a ordem importa pra evitar falso-positivo. Luizacred precisa vir
+# antes do ItauParser porque ambos casam o cabeçalho "Lançamentos:..." (mesmo
+# emissor); o marcador LUIZACRED é o que diferencia.
+_PARSERS: list[PDFParser] = [
+    NubankParser(),
+    LuizacredParser(),
+    ItauParser(),
+    DigioParser(),
+    WillParser(),
+    MercadoLivreParser(),
+    GenericoParser(),
+]
 
 
 def registrar(parser: PDFParser) -> None:
