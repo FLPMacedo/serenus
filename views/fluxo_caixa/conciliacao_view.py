@@ -26,7 +26,7 @@ from views.fluxo_caixa.conta_banco_model import (
 )
 from views.fluxo_caixa.extrato_banco_model import (
     listar_lancamentos_mes, marcar_conciliado, resumo_conta,
-    categorizar, obter_lancamento,
+    categorizar, obter_lancamento, excluir_lancamento,
 )
 
 
@@ -512,10 +512,34 @@ class ConciliacaoView(ctk.CTkFrame):
             dlg.destroy()
             self._recarregar()
 
+        def excluir():
+            if not mb.askyesno(
+                "Excluir lançamento",
+                f"Excluir este lançamento?\n\n{lanc.descricao[:80]}\n"
+                f"{sinal} {formatar_moeda(abs(lanc.valor))} em {lanc.data}\n\n"
+                "Esta ação não pode ser desfeita. Para re-importar este "
+                "lançamento, basta importar o extrato de novo — ele virá "
+                "como novo (não é mais considerado duplicado).",
+            ):
+                return
+            # Excluir do banco
+            excluir_lancamento(lanc_id)
+            dlg.destroy()
+            self._recarregar()
+
+        # Linha 1 de botões: ações destrutivas (esquerda)
+        esq = ctk.CTkFrame(botoes, fg_color="transparent")
+        esq.pack(side="left")
         ctk.CTkButton(
-            botoes, text="Remover categoria", width=140,
+            esq, text="🗑 Excluir", width=100,
             fg_color="transparent", border_width=1,
             border_color=cores["alerta"], text_color=cores["alerta"],
+            command=excluir,
+        ).pack(side="left", padx=(0, 6))
+        ctk.CTkButton(
+            esq, text="Remover categoria", width=140,
+            fg_color="transparent", border_width=1,
+            border_color=cores["texto_mudo"], text_color=cores["texto_mudo"],
             command=remover,
         ).pack(side="left")
 
