@@ -310,6 +310,11 @@ class _EspeciaisTab(ctk.CTkFrame):
                                             self._toast("Receita especial atualizada.")))
 
     def _excluir(self, e: ReceitaEspecial):
+        # BUGFIX: este método antes referenciava `cores["borda"]` e
+        # `cores["texto"]` — variável LOCAL inexistente neste escopo. O
+        # NameError fazia o diálogo crashar silenciosamente, dando a
+        # impressão de que o botão Excluir não funcionava. Usar `self._cores`.
+        cores = self._cores
         dlg = ctk.CTkToplevel(self)
         dlg.title("Confirmar exclusão")
         dlg.geometry("300x130")
@@ -318,7 +323,7 @@ class _EspeciaisTab(ctk.CTkFrame):
         ctk.CTkLabel(dlg, text=f"Excluir \"{e.nome}\"?",
                      font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(20, 4))
         ctk.CTkLabel(dlg, text="Esta ação não pode ser desfeita.",
-                     text_color=self._cores["texto_mudo"]).pack()
+                     text_color=cores["texto_mudo"]).pack()
         btns = ctk.CTkFrame(dlg, fg_color="transparent")
         btns.pack(pady=12)
         ctk.CTkButton(btns, text="Cancelar", width=100,
@@ -327,7 +332,7 @@ class _EspeciaisTab(ctk.CTkFrame):
                       text_color=cores["texto"],
                       command=dlg.destroy).pack(side="left", padx=6)
         ctk.CTkButton(btns, text="Excluir", width=100,
-                      fg_color=self._cores["alerta"],
+                      fg_color=cores["alerta"],
                       command=lambda: self._conf_excluir(e.id, dlg)).pack(side="left", padx=6)
 
     def _conf_excluir(self, id: int, dlg):

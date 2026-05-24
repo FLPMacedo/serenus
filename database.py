@@ -78,16 +78,36 @@ def inicializar_banco():
         CREATE TABLE IF NOT EXISTS dividas (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             nome            TEXT NOT NULL,
-            tipo            TEXT CHECK(tipo IN ('cartao', 'emprestimo', 'financiamento', 'outro')),
+            tipo            TEXT CHECK(tipo IN ('cartao', 'emprestimo', 'financiamento',
+                                                'cheque_especial', 'outro')),
             saldo_atual     REAL NOT NULL,
             parcela_mensal  REAL NOT NULL,
             total_parcelas  INTEGER NOT NULL,
             parcelas_pagas  INTEGER DEFAULT 0,
             dia_vencimento  INTEGER,
             taxa_juros      REAL DEFAULT 0,
+            -- Limite de crédito disponível (usado em tipo='cheque_especial';
+            -- nos outros tipos fica zerado). O saldo_atual representa o
+            -- saldo utilizado/devedor; (limite_total - saldo_atual) = saldo
+            -- ainda disponível pra usar do cheque especial.
+            limite_total    REAL DEFAULT 0,
             observacao      TEXT,
             ativa           INTEGER DEFAULT 1,
             criado_em       TEXT
+        );
+
+        -- Eventos de juros descontados pelo banco em cheque especial.
+        -- Cada lançamento gera 1 entrada aqui (histórico) e, opcionalmente,
+        -- uma conta_pagar com status='pago' (referenciada por conta_pagar_id)
+        -- para que o juros pago apareça no fluxo de caixa do mês.
+        CREATE TABLE IF NOT EXISTS juros_cheque_especial (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            divida_id       INTEGER NOT NULL REFERENCES dividas(id),
+            data            TEXT    NOT NULL,
+            valor           REAL    NOT NULL,
+            observacao      TEXT    DEFAULT '',
+            conta_pagar_id  INTEGER REFERENCES contas_pagar(id),
+            criado_em       TEXT    NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS backups (
@@ -410,6 +430,7 @@ def inicializar_banco():
     _migrar_tabelas_os(conn)
     _migrar_tabelas_casa(conn)
     _migrar_compras_cartao(conn)
+    _migrar_dividas(conn)
     _popular_contas_padrao(conn)
     _popular_fontes_padrao(conn)
     _popular_marcas_padrao(conn)
@@ -666,6 +687,75 @@ def _migrar_tabelas_casa(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrar_dividas(conn: sqlite3.Connection):
+    """Garante schema atualizado da tabela `dividas` em bancos pré-existentes:
+
+    1. Adiciona a coluna `limite_total` (usada por tipo='cheque_especial').
+    2. Relaxa o CHECK do `tipo` pra aceitar 'cheque_especial'. SQLite não
+       permite ALTER CHECK, então faz table redefinition (cria nova tabela,
+       copia dados, dropa e renomeia — operação segura dentro de transação).
+    3. Cria a tabela `juros_cheque_especial` se faltar (histórico de juros
+       descontados pelo banco em cheque especial).
+    """
+    cur = conn.cursor()
+    cols = {r[1] for r in cur.execute("PRAGMA table_info(dividas)").fetchall()}
+
+    # (1) Coluna limite_total
+    if "limite_total" not in cols:
+        cur.execute("ALTER TABLE dividas ADD COLUMN limite_total REAL DEFAULT 0")
+
+    # (2) CHECK do tipo — só rebuilda se for um schema antigo (sem cheque_especial)
+    row = cur.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='dividas'"
+    ).fetchone()
+    schema_atual = (row[0] if row else "") or ""
+    if "cheque_especial" not in schema_atual:
+        # Table redefinition: cria com schema novo, copia dados, dropa e renomeia
+        cur.executescript("""
+            CREATE TABLE dividas_new (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome            TEXT NOT NULL,
+                tipo            TEXT CHECK(tipo IN ('cartao', 'emprestimo', 'financiamento',
+                                                    'cheque_especial', 'outro')),
+                saldo_atual     REAL NOT NULL,
+                parcela_mensal  REAL NOT NULL,
+                total_parcelas  INTEGER NOT NULL,
+                parcelas_pagas  INTEGER DEFAULT 0,
+                dia_vencimento  INTEGER,
+                taxa_juros      REAL DEFAULT 0,
+                limite_total    REAL DEFAULT 0,
+                observacao      TEXT,
+                ativa           INTEGER DEFAULT 1,
+                criado_em       TEXT
+            );
+            INSERT INTO dividas_new
+                (id, nome, tipo, saldo_atual, parcela_mensal, total_parcelas,
+                 parcelas_pagas, dia_vencimento, taxa_juros, limite_total,
+                 observacao, ativa, criado_em)
+            SELECT id, nome, tipo, saldo_atual, parcela_mensal, total_parcelas,
+                   parcelas_pagas, dia_vencimento, taxa_juros,
+                   COALESCE(limite_total, 0),
+                   observacao, ativa, criado_em
+            FROM dividas;
+            DROP TABLE dividas;
+            ALTER TABLE dividas_new RENAME TO dividas;
+        """)
+
+    # (3) Histórico de juros descontados em cheque especial
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS juros_cheque_especial (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            divida_id       INTEGER NOT NULL REFERENCES dividas(id),
+            data            TEXT    NOT NULL,
+            valor           REAL    NOT NULL,
+            observacao      TEXT    DEFAULT '',
+            conta_pagar_id  INTEGER REFERENCES contas_pagar(id),
+            criado_em       TEXT    NOT NULL
+        )
+    """)
+    conn.commit()
+
+
 _CONTAS_PADRAO = [
     # (nome, tipo_custo, categoria)
     ("Aluguel / Financiamento imóvel", "fixo",    "Moradia"),
@@ -701,6 +791,8 @@ _CONTAS_PADRAO = [
     ("Vestuário",                      "variavel","Pessoal"),
     ("Cuidados pessoais",              "variavel","Pessoal"),
     ("Presentes",                      "variavel","Pessoal"),
+    ("Juros — Cheque Especial",        "variavel","Despesas Bancárias"),
+    ("Tarifas bancárias",              "fixo",    "Despesas Bancárias"),
     ("Outros",                         "variavel","Outros"),
 ]
 
@@ -923,6 +1015,7 @@ def zerar_dados():
             DELETE FROM parcelas_cartao;
             DELETE FROM compras_cartao;
             DELETE FROM cartoes;
+            DELETE FROM juros_cheque_especial;
             DELETE FROM contas_pagar;
             DELETE FROM plano_contas;
             DELETE FROM fontes_receita;
@@ -948,8 +1041,18 @@ def zerar_dados():
                 'bandeiras_custom'
             )
         """)
+        # BUGFIX: marca dados_exemplo_inseridos como 'true' ANTES de chamar
+        # inicializar_banco(). Antes, a flag era setada DEPOIS — e o
+        # popular_dados_exemplo() chamado por inicializar_banco() re-inseria
+        # "13º Salário" e "Férias + 1/3" em receitas_especiais. Resultado:
+        # o usuário zerava o sistema mas essas 2 entradas voltavam sozinhas.
+        conn.execute(
+            "INSERT OR REPLACE INTO configuracoes (chave, valor) "
+            "VALUES ('dados_exemplo_inseridos', 'true')"
+        )
     inicializar_banco()
-    # Garante que dados de exemplo não sejam re-inseridos após o reset
+    # Redundante mas mantido por garantia (caso o INSERT OR REPLACE acima
+    # seja perdido em algum edge case de transação).
     salvar_configuracao("dados_exemplo_inseridos", "true")
 
 
