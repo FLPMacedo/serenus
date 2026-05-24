@@ -21,6 +21,44 @@ _COLS = [
 
 
 class ExtratoCaixaView(ctk.CTkFrame):
+    """Container do Fluxo de Caixa com 2 abas:
+       - Movimentações (extrato consolidado de todas as origens)
+       - Conciliação Bancária (extratos importados de bancos)
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent, fg_color="transparent")
+        self._cores = get_tema(obter_configuracao("tema", "claro"))
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        self._tabview = ctk.CTkTabview(self, fg_color="transparent")
+        self._tabview.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
+        self._tabview.add("📋  Movimentações")
+        self._tabview.add("🏦  Conciliação Bancária")
+
+        # Aba 1: extrato consolidado (lógica atual)
+        aba_mov = self._tabview.tab("📋  Movimentações")
+        aba_mov.grid_columnconfigure(0, weight=1)
+        aba_mov.grid_rowconfigure(0, weight=1)
+        _AbaMovimentacoes(aba_mov).grid(row=0, column=0, sticky="nsew")
+
+        # Aba 2: conciliação bancária (nova)
+        aba_conc = self._tabview.tab("🏦  Conciliação Bancária")
+        aba_conc.grid_columnconfigure(0, weight=1)
+        aba_conc.grid_rowconfigure(0, weight=1)
+        from views.fluxo_caixa.conciliacao_view import ConciliacaoView
+        ConciliacaoView(aba_conc).grid(row=0, column=0, sticky="nsew")
+
+
+class _AbaMovimentacoes(ctk.CTkFrame):
+    """Aba 'Movimentações' — extrato consolidado de todas as origens
+    (contas_pagar, fontes_receita, vendas, investimentos, lançamentos manuais).
+
+    Conteúdo idêntico à versão original do ExtratoCaixaView.
+    """
+
     def __init__(self, parent):
         super().__init__(parent, fg_color="transparent")
         self._cores = get_tema(obter_configuracao("tema", "claro"))

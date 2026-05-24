@@ -353,6 +353,54 @@ def inicializar_banco():
                 (tipo = 'saida'   AND plano_conta_id IS NOT NULL AND fonte_receita_id IS NULL)
             )
         );
+
+        -- Contas bancárias do usuário (Nubank, Itaú, etc).
+        CREATE TABLE IF NOT EXISTS contas_banco (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome         TEXT    NOT NULL,              -- "Nubank Principal"
+            banco        TEXT,                          -- "Nubank", "Itaú Unibanco"
+            tipo         TEXT    DEFAULT 'corrente'
+                          CHECK(tipo IN ('corrente','poupanca','digital','salario','outra')),
+            agencia      TEXT,
+            numero       TEXT,
+            saldo_inicial REAL   DEFAULT 0,
+            ativa        INTEGER DEFAULT 1,
+            criado_em    TEXT    NOT NULL
+        );
+
+        -- Lançamentos importados de extratos bancários.
+        CREATE TABLE IF NOT EXISTS lancamentos_banco (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            conta_banco_id      INTEGER NOT NULL REFERENCES contas_banco(id) ON DELETE CASCADE,
+            data                TEXT    NOT NULL,         -- YYYY-MM-DD
+            descricao           TEXT    NOT NULL,
+            valor               REAL    NOT NULL,         -- positivo=entrada, negativo=saida
+            identificador_unico TEXT,                     -- FITID/UUID do banco, ou hash gerado
+            plano_conta_id      INTEGER REFERENCES plano_contas(id),       -- categoria saída
+            fonte_receita_id    INTEGER REFERENCES fontes_receita(id),     -- categoria entrada
+            conciliado          INTEGER DEFAULT 0,        -- usuário revisou?
+            conta_pagar_id      INTEGER REFERENCES contas_pagar(id),       -- conciliado com qual?
+            observacao          TEXT,
+            importado_em        TEXT    NOT NULL,
+            UNIQUE(conta_banco_id, identificador_unico)
+        );
+
+        -- Regras de categorização automática (se descrição LIKE %padrao% → categoria).
+        CREATE TABLE IF NOT EXISTS regras_categoria (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            padrao           TEXT    NOT NULL,                  -- substring case-insensitive
+            tipo             TEXT    NOT NULL CHECK(tipo IN ('entrada','saida')),
+            plano_conta_id   INTEGER REFERENCES plano_contas(id),
+            fonte_receita_id INTEGER REFERENCES fontes_receita(id),
+            prioridade       INTEGER DEFAULT 0,                 -- maior = aplicada primeiro
+            ativa            INTEGER DEFAULT 1,
+            criado_em        TEXT    NOT NULL,
+            CHECK (
+                (tipo = 'entrada' AND fonte_receita_id IS NOT NULL AND plano_conta_id IS NULL)
+                OR
+                (tipo = 'saida'   AND plano_conta_id IS NOT NULL AND fonte_receita_id IS NULL)
+            )
+        );
     """)
 
     conn.commit()
