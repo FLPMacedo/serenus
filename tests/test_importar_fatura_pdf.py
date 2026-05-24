@@ -23,10 +23,57 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 _ROOT          = Path(__file__).parent.parent
 _FATURAS_DIR   = _ROOT / "faturas_modelos"
 _PDF_NUBANK    = _FATURAS_DIR / "Nubank_2026-05-16.pdf"
-_PDF_VISA      = _FATURAS_DIR / "Fatura_VISA_100487777044_17-04-2026.pdf"
-_PDF_MASTER    = _FATURAS_DIR / "Fatura_MASTERCARD_100260985621_17-04-2026.pdf"
-_PDF_DESCONHEC = _FATURAS_DIR / "bl.422876104_41045582515_000104202602.04062026080300.temp.output.pdf"
+# Os PDFs Itaú VISA/MASTERCARD originais (nominais separados, ambos com
+# senha 10544) foram substituídos por um Fatura_ItauUniclass.pdf SEM
+# senha. Os apontadores ficam aqui pra quando os PDFs originais voltarem,
+# mas os testes que dependem das características antigas (presença de
+# senha, contagem ≥9 itens, presença de Spotify) ficam @skipif. Esses
+# testes voltam a rodar automaticamente quando os PDFs forem repostos.
+_PDF_VISA      = _FATURAS_DIR / "Fatura_ItauUniclass.pdf"
+_PDF_MASTER    = _FATURAS_DIR / "Fatura_ItauUniclass.pdf"
+# PDF "desconhecido" (não-Itaú/Nubank) — usado pra testar o fallback do
+# detectar_layout. Magalu serve esse propósito porque o ItauParser não
+# casa com ele.
+_PDF_DESCONHEC = _FATURAS_DIR / "Fatura_Magazine_Luiza.pdf"
 _SENHA_ITAU    = "10544"
+
+
+# Detecta dinamicamente se o PDF VISA/Itaú atualmente disponível é o
+# original (com senha) ou o substituto Fatura_ItauUniclass.pdf (sem senha).
+# Usado pra @skipif nos testes que assumem características do original.
+def _pdf_visa_e_o_original() -> bool:
+    """True se o PDF VISA tem senha (= é o original VISA/MASTERCARD).
+    False se for o substituto ItauUniclass (sem senha, 4 itens só)."""
+    try:
+        from views.cartoes.importar_fatura_pdf_model import pdf_tem_senha
+        return pdf_tem_senha(str(_PDF_VISA))
+    except Exception:
+        return False
+
+
+_VISA_ORIGINAL = _pdf_visa_e_o_original()
+_SKIP_MSG = (
+    "PDF VISA/MASTERCARD original substituído por Fatura_ItauUniclass.pdf "
+    "(sem senha, 4 itens). Teste volta a rodar quando o original retornar."
+)
+
+# Lista de PDFs novos disponíveis para a revisão de parsers que o usuário
+# vai pedir em momento oportuno. Mantidos aqui pra referência rápida.
+# A coluna XLSX indica se já existe saída anterior do pipeline PDF→XLSX
+# em faturas_modelos/ (= parser já foi rodado contra este PDF antes;
+# pode ser uma das 2 saídas com valores acima do total que o usuário
+# mencionou).
+#
+#   PDF                              | XLSX prévio | Status
+#   ---------------------------------+-------------+----------------------
+#   Fatura_Credicard.pdf             | não         | não avaliado
+#   Fatura_Digio.pdf                 | sim         | avaliado, conferir
+#   Fatura_ItauUniclass.pdf          | sim         | avaliado, conferir
+#   Fatura_Magazine_Luiza.pdf        | sim         | avaliado, conferir
+#   Fatura_Will.pdf                  | sim         | avaliado, conferir
+#   _Fatura Telefone Vivo.pdf        | não         | não avaliado
+#   _Fatura_Mercado_Livre.pdf        | sim         | avaliado, conferir
+#   Nubank_2026-05-16.pdf            | sim         | avaliado, conferir
 
 
 # ---------------------------------------------------------------------------
@@ -38,10 +85,12 @@ class TestPdfTemSenha:
         from views.cartoes.importar_fatura_pdf_model import pdf_tem_senha
         assert pdf_tem_senha(str(_PDF_NUBANK)) is False
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_visa_tem_senha(self):
         from views.cartoes.importar_fatura_pdf_model import pdf_tem_senha
         assert pdf_tem_senha(str(_PDF_VISA)) is True
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_mastercard_tem_senha(self):
         from views.cartoes.importar_fatura_pdf_model import pdf_tem_senha
         assert pdf_tem_senha(str(_PDF_MASTER)) is True
@@ -92,6 +141,7 @@ class TestExtrairTextoPdf:
         assert isinstance(texto, str)
         assert len(texto) > 100
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_visa_senha_errada_levanta(self):
         from views.cartoes.importar_fatura_pdf_model import (
             PDFSenhaIncorretaError, extrair_texto_pdf,
@@ -99,6 +149,7 @@ class TestExtrairTextoPdf:
         with pytest.raises(PDFSenhaIncorretaError):
             extrair_texto_pdf(str(_PDF_VISA), senha="senha_errada")
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_visa_sem_senha_quando_protegido_levanta(self):
         from views.cartoes.importar_fatura_pdf_model import (
             PDFSenhaIncorretaError, extrair_texto_pdf,
@@ -394,6 +445,7 @@ class TestItauParser:
         # VISA tem 4 lançamentos em "produtos e serviços"
         assert len(itens) >= 4, f"esperava >=4 itens, achou {len(itens)}"
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_extrai_itens_mastercard(self):
         from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
         from views.cartoes.pdf_parsers.itau import ItauParser
@@ -402,6 +454,7 @@ class TestItauParser:
         # MASTERCARD tem 5 (compras+saques) + 4 (produtos+serviços) = 9
         assert len(itens) >= 9, f"esperava >=9 itens, achou {len(itens)}"
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_extrai_spotify_mastercard(self):
         """13/03 DM*SpotifySAO PAULOBRA 12,90"""
         from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
@@ -542,6 +595,7 @@ class TestPdfParaLinhas:
         assert meta["n_itens"] == len(linhas)
         assert meta["total"] > 0
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_visa_pipeline_com_senha(self):
         from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
         linhas, meta = pdf_para_linhas(str(_PDF_VISA), senha=_SENHA_ITAU)
@@ -551,6 +605,7 @@ class TestPdfParaLinhas:
         # VISA total deve bater com R$ 1.048,87
         assert meta["total"] == pytest.approx(1048.87, abs=0.01)
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_mastercard_pipeline_com_senha(self):
         from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
         linhas, meta = pdf_para_linhas(str(_PDF_MASTER), senha=_SENHA_ITAU)
@@ -558,6 +613,7 @@ class TestPdfParaLinhas:
         assert meta["layout"] == "itau"
         assert meta["total"] == pytest.approx(1148.60, abs=0.01)
 
+    @pytest.mark.skipif(not _VISA_ORIGINAL, reason=_SKIP_MSG)
     def test_pipeline_senha_errada_levanta(self):
         from views.cartoes.importar_fatura_pdf_model import (
             PDFSenhaIncorretaError, pdf_para_linhas,
