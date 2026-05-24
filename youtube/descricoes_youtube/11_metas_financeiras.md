@@ -1,37 +1,86 @@
 # Descrição YouTube — Ep 11 Metas Financeiras
 
-📋 INÍCIO DA DESCRIÇÃO
+## 🎯 3 Opções de Título
 
 ```
-🎯 METAS FINANCEIRAS no Serenus: do sonho ao plano. Cadastre objetivos (reserva, casa, viagem, carro), acompanhe progresso, deposite e veja quanto precisa guardar por mês.
+A) METAS FINANCEIRAS no Serenus: do SONHO ao PLANO em 4 min | Ep 11
+B) Como atingir suas METAS — Reserva, Casa, Viagem | Serenus Ep 11
+C) Casamento, Casa, Carro... PLANEJAMENTO REAL no Serenus | Ep 11
+```
+
+> Recomendado: **A** (gancho emocional + duração)
+
+---
+
+## 📋 INÍCIO DA DESCRIÇÃO
+
+```
+🎯 METAS FINANCEIRAS no Serenus: transforme SONHOS em PLANO concreto. Reserva de emergência, casa própria, viagem dos sonhos, carro novo... O app calcula automaticamente quanto você precisa guardar POR MÊS pra bater cada meta no prazo.
+
+📥 BAIXAR SERENUS (grátis):
+https://github.com/FLPMacedo/serenus/releases
 
 ⏱️ ÍNDICE:
-0:00 Introdução
-0:20 Tela de Metas (cards visuais)
+0:00 Hook
+0:20 Tela de Metas (cards visuais com progresso)
 0:50 Criando uma meta nova
 2:00 Depositando dinheiro pra meta
 2:45 Vendo várias metas em paralelo
 3:30 Editar / Excluir
 3:50 CTA
 
+🎁 CADA META MOSTRA:
+✅ Nome (ex.: "Entrada do apto")
+✅ Valor alvo (ex.: R$ 60.000)
+✅ Valor já guardado (ex.: R$ 18.000 = 30%)
+✅ Barra de progresso colorida
+✅ % concluído
+✅ Dias restantes até o prazo
+✅ Quanto economizar POR MÊS pra bater o prazo
+
 💡 PERFIL DEMO USADO:
-`casal_planejando` — casal CLT com 5 metas grandes (entrada apto R$ 60k, casamento R$ 45k, lua de mel R$ 18k, reserva R$ 42k, carro R$ 85k).
+`casal_planejando` — casal jovem CLT (R$ 11.500 combinado) com 5 metas grandes:
+🏠 Entrada apartamento R$ 60k (30% feito)
+💒 Casamento R$ 45k (28% feito)
+✈️ Lua de mel R$ 18k (18% feito)
+🆘 Reserva 6 meses R$ 42k (52% feito)
+🚗 Carro novo R$ 85k (recém começado)
 
-Cálculo automático de "economia mensal necessária" pra bater o prazo.
+🎯 CASOS DE USO:
+• Reserva de emergência (6-12 meses de despesas)
+• Entrada de imóvel
+• Casamento
+• Viagem internacional
+• Carro novo
+• Faculdade dos filhos
+• Aposentadoria
 
-📥 BAIXAR (grátis): https://github.com/FLPMacedo/serenus/releases
+📲 Quando a meta atinge 100%, o card vira VERDE com selo "Concluída!". Dopamina certa.
 
-🎬 PRÓXIMO: Ep 12 — Pra prestador de serviço (OS + Clientes): <URL_PROXIMO_VIDEO>
-🎬 PLAYLIST: <URL_PLAYLIST>
+🎬 PRÓXIMO VÍDEO:
+▶ Ep 12 — Pra prestador de serviço (OS + Clientes): <URL_PROXIMO_VIDEO>
 
-❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
+🎬 PLAYLIST COMPLETA:
+▶ <URL_PLAYLIST>
 
-#Serenus #MetasFinanceiras #Planejamento #ReservaDeEmergência #UaiScript
+❤️ APOIE O PROJETO (PIX):
+📩 filipemarquesmacedo12@gmail.com
+
+🔗 LINKS:
+• GitHub: https://github.com/FLPMacedo/serenus
+• Releases: https://github.com/FLPMacedo/serenus/releases
+
+💬 QUAL É A SUA META FINANCEIRA MAIS GRANDE PRA OS PRÓXIMOS 3 ANOS?
+
+#Serenus #MetasFinanceiras #Planejamento #ReservaDeEmergência #PlanejamentoFinanceiro #UaiScript
 ```
 
-📋 FIM DA DESCRIÇÃO
+## 📋 FIM DA DESCRIÇÃO
 
-## Tags
+---
+
+## 🏷️ Tags
+
 ```
-metas financeiras, reserva de emergência, planejar viagem, planejar casa própria, app metas, sonhos financeiros, serenus metas, uaiscript
+metas financeiras app, reserva de emergência, planejar viagem, planejar casa própria, app metas grátis, sonhos financeiros, calcular meta mensal, controle de objetivos, planejamento longo prazo, app financeiro metas, definir metas dinheiro, sair do aluguel, casa própria planejamento, viagem dos sonhos planejamento, casamento planejamento financeiro, serenus metas, uaiscript metas, app brasil metas
 ```

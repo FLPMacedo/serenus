@@ -1,42 +1,97 @@
-# Descrição YouTube — Ep 12 Prestador de Serviço
+# Descrição YouTube — Ep 12 Pra Prestador de Serviço
 
-📋 INÍCIO DA DESCRIÇÃO
+## 🎯 3 Opções de Título
 
 ```
-🔧 SERENUS pra ELETRICISTA, encanador, técnico de informática, marceneiro... Único app com OS + Clientes + Produtos + Vendas integrados. Sem mensalidade.
+A) Serenus pra ELETRICISTA, técnico, prestador de serviço (OS + Clientes) | Ep 12
+B) ORDEM DE SERVIÇO grátis no Serenus: pra ELETRICISTA, ENCANADOR, TÉCNICO | Ep 12
+C) Software para PRESTADOR DE SERVIÇO grátis e completo | Serenus Ep 12
+```
+
+> Recomendado: **B** (lista profissões específicas — picos de busca)
+
+---
+
+## 📋 INÍCIO DA DESCRIÇÃO
+
+```
+🔧 SERENUS pra ELETRICISTA, encanador, técnico de informática, marceneiro, técnico de refrigeração, manutenção em geral. Único app gratuito com OS (Ordem de Serviço) + Clientes + Produtos + Vendas TUDO integrado. Sem mensalidade, sem complicação.
+
+📥 BAIXAR SERENUS (grátis):
+https://github.com/FLPMacedo/serenus/releases
 
 ⏱️ ÍNDICE:
-0:00 Introdução
-0:25 Carregando perfil prestador_servico
+0:00 Hook (pra prestador de serviço)
+0:25 Carregando perfil "prestador_servico" (eletricista)
 0:50 Clientes cadastrados (PF + PJ com CNPJ)
-1:30 Catálogo de produtos/serviços
+1:30 Catálogo de produtos/serviços (mão-de-obra + materiais)
 2:10 6 Ordens de Serviço em estados variados
-3:30 Anatomia de uma OS completa (PDF gerado)
+3:30 Anatomia de uma OS completa + Imprimir PDF
 4:20 Vendas balcão à vista e a prazo
 4:45 CTA
 
-🛠️ MÓDULOS DESTACADOS:
-✅ Clientes (PF e PJ, com endereço, WhatsApp, email)
-✅ Produtos (mão-de-obra por hora + materiais)
-✅ Ordens de Serviço (4 status: aberta → em_andamento → aguardando_peca → concluída)
-✅ Vendas (à vista e a prazo)
-✅ Impressão PDF da OS
+🛠️ MÓDULOS INTEGRADOS:
 
-📥 BAIXAR (grátis): https://github.com/FLPMacedo/serenus/releases
+👥 CLIENTES
+• Cadastro PF (CPF) e PJ (CNPJ)
+• Telefone, WhatsApp, email, endereço
+• Histórico de OS por cliente
+• Máscaras automáticas (CPF, CNPJ, telefone, CEP)
 
-🎬 PRÓXIMO: Ep 13 — Pra MEI dono de loja: <URL_PROXIMO_VIDEO>
-🎬 PLAYLIST: <URL_PLAYLIST>
+📦 PRODUTOS / SERVIÇOS
+• Mão-de-obra por hora (ex.: R$ 80/h)
+• Materiais (disjuntor, tomada, cabo, lâmpada, etc)
+• Preço fixo (preenche automaticamente nas vendas e OS)
 
-❤️ APOIE (PIX): 📩 filipemarquesmacedo12@gmail.com
+📝 ORDENS DE SERVIÇO
+• Status: aberta → em_andamento → aguardando_peca → concluída
+• Cliente vinculado (ou solicitante livre)
+• Datas de solicitação e execução
+• Materiais usados (puxados do catálogo de produtos)
+• Mão de obra calculada (valor/hora × horas)
+• Total automático
+• Botão "Imprimir PDF" gera OS pra entregar pro cliente
 
-📲 COMPARTILHA esse vídeo com aquele técnico/prestador amigo!
+🛒 VENDAS
+• À vista (status "paga")
+• A prazo com parcelas em Contas a Receber
+• Vinculadas (ou não) a clientes
 
-#Serenus #PrestadorDeServiço #OrdemDeServiço #Eletricista #Técnico #UaiScript
+💡 CASOS DE USO:
+• Eletricista — instalações + manutenções
+• Encanador — emergências + serviços agendados
+• Técnico de informática — reparo de PC + venda de peças
+• Marceneiro — móveis sob medida
+• Mecânico autônomo — serviços + peças
+• Manutenção predial — chamados internos
+• Refrigeração — limpezas + reparos
+
+🎬 PRÓXIMO VÍDEO:
+▶ Ep 13 — Pra MEI dono de loja: <URL_PROXIMO_VIDEO>
+
+🎬 PLAYLIST COMPLETA:
+▶ <URL_PLAYLIST>
+
+❤️ APOIE O PROJETO (PIX):
+📩 filipemarquesmacedo12@gmail.com
+
+🔗 LINKS:
+• GitHub: https://github.com/FLPMacedo/serenus
+• Releases: https://github.com/FLPMacedo/serenus/releases
+
+📲 COMPARTILHA esse vídeo no teu grupo de WhatsApp de prestador de serviço — vai ajudar muita gente!
+
+💬 QUAL É A TUA PROFISSÃO? Eletricista? Encanador? Técnico? Comenta aí pra eu fazer cenário do teu nicho.
+
+#Serenus #PrestadorDeServiço #OrdemDeServiço #Eletricista #Encanador #Técnico #Marceneiro #UaiScript
 ```
 
-📋 FIM DA DESCRIÇÃO
+## 📋 FIM DA DESCRIÇÃO
 
-## Tags
+---
+
+## 🏷️ Tags
+
 ```
-software para eletricista, ordem de serviço grátis, controle prestador serviço, software técnico, app encanador, app marceneiro, controle clientes prestador, OS interna, serenus prestador, uaiscript
+software para eletricista, software para encanador, software para técnico, ordem de serviço grátis, OS grátis app, controle prestador serviço, app encanador, app marceneiro, app técnico informática, app refrigeração, app manutenção, controle clientes prestador, software autônomo, OS interna, ordem serviço PDF, sistema OS grátis, app brasileiro prestador, software técnico em campo, serenus prestador, uaiscript prestador, controle financeiro prestador serviço
 ```
