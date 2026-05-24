@@ -261,6 +261,72 @@ def excluir_lancamentos_conta(conta_banco_id: int) -> int:
         return cur.rowcount
 
 
+@dataclass
+class ContaPagarCandidata:
+    """Sugestão de conta_pagar pra vincular com um lançamento bancário."""
+    id:              int
+    data_vencimento: str
+    descricao:       str
+    valor:           float
+    status:          str
+    nome_categoria:  str
+
+
+def candidatas_para_vincular(
+    data: str,
+    valor: float,
+    dias_tolerancia: int = 5,
+    valor_tolerancia: float = 0.01,
+) -> list[ContaPagarCandidata]:
+    """Retorna contas_pagar que poderiam ser conciliadas com este lançamento.
+
+    Filtra por:
+    - data_vencimento entre (data - dias) e (data + dias)
+    - |valor da conta - valor absoluto do lançamento| <= valor_tolerancia
+    - status != 'cancelado'
+
+    Ordena por proximidade da data, depois pelo valor mais próximo.
+    """
+    from datetime import datetime, timedelta
+    try:
+        d = datetime.strptime(data, "%Y-%m-%d").date()
+    except ValueError:
+        return []
+
+    d_min = (d - timedelta(days=dias_tolerancia)).isoformat()
+    d_max = (d + timedelta(days=dias_tolerancia)).isoformat()
+    alvo  = abs(valor)
+
+    with conectar() as conn:
+        rows = conn.execute(
+            """
+            SELECT cp.id, cp.data_vencimento, cp.descricao, cp.valor, cp.status,
+                   COALESCE(pc.nome, '') AS nome_categoria
+              FROM contas_pagar cp
+              LEFT JOIN plano_contas pc ON pc.id = cp.plano_conta_id
+             WHERE cp.data_vencimento BETWEEN ? AND ?
+               AND cp.status != 'cancelado'
+               AND ABS(cp.valor - ?) <= ?
+             ORDER BY ABS(julianday(cp.data_vencimento) - julianday(?)),
+                      ABS(cp.valor - ?)
+             LIMIT 20
+            """,
+            (d_min, d_max, alvo, valor_tolerancia, data, alvo),
+        ).fetchall()
+
+    return [
+        ContaPagarCandidata(
+            id=r["id"],
+            data_vencimento=r["data_vencimento"],
+            descricao=r["descricao"] or "",
+            valor=r["valor"],
+            status=r["status"],
+            nome_categoria=r["nome_categoria"],
+        )
+        for r in rows
+    ]
+
+
 def reaplicar_regras(
     conta_banco_id: int | None = None,
     apenas_sem_categoria: bool = True,

@@ -27,6 +27,7 @@ from views.fluxo_caixa.conta_banco_model import (
 from views.fluxo_caixa.extrato_banco_model import (
     listar_lancamentos_mes, marcar_conciliado, resumo_conta,
     categorizar, obter_lancamento, excluir_lancamento, reaplicar_regras,
+    vincular_conta_pagar, candidatas_para_vincular,
 )
 
 
@@ -356,9 +357,12 @@ class ConciliacaoView(ctk.CTkFrame):
         cor_val = cores["positivo"] if lanc.valor > 0 else cores["alerta"]
         sinal = "+" if lanc.valor > 0 else "-"
 
+        # Prefixo 🔗 se vinculado com conta_pagar
+        desc_prefix = "🔗 " if lanc.conta_pagar_id else ""
+
         cells = [
             (data_fmt, 0, "w", cores["texto_mudo"], False),
-            (lanc.descricao, 1, "w", cores["texto"], False),
+            (desc_prefix + lanc.descricao, 1, "w", cores["texto"], False),
             (cat_txt, 2, "w", cor_cat, False),
             (f"{sinal} {valor_txt}", 3, "e", cor_val, True),
         ]
@@ -483,7 +487,7 @@ class ConciliacaoView(ctk.CTkFrame):
         # Mini diálogo (CTkToplevel inline)
         dlg = ctk.CTkToplevel(self)
         dlg.title("Categorizar Lançamento")
-        dlg.geometry("420x260")
+        dlg.geometry("460x420")
         dlg.grab_set()
         dlg.bind("<Escape>", lambda e: dlg.destroy())
 
@@ -509,14 +513,54 @@ class ConciliacaoView(ctk.CTkFrame):
             tipo = "saida"
             opcoes = listar_plano_contas(apenas_ativas=True)
 
+        ctk.CTkLabel(
+            dlg, text="Categoria:", anchor="w",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=cores["texto_mudo"],
+        ).pack(padx=16, anchor="w")
         nomes = [o.nome for o in opcoes] or ["(cadastre uma categoria primeiro)"]
-        combo = ctk.CTkComboBox(dlg, values=nomes, state="readonly", width=380)
+        combo = ctk.CTkComboBox(dlg, values=nomes, state="readonly", width=420)
         atual = lanc.nome_categoria
         if atual and atual in nomes:
             combo.set(atual)
         else:
             combo.set(nomes[0])
-        combo.pack(padx=16, pady=4)
+        combo.pack(padx=16, pady=(2, 14))
+
+        # Vínculo com conta_pagar (só pra saídas)
+        combo_cp = None
+        candidatas: list = []
+        if lanc.valor < 0:
+            ctk.CTkLabel(
+                dlg, text="Vincular com conta a pagar:", anchor="w",
+                font=ctk.CTkFont(size=11, weight="bold"),
+                text_color=cores["texto_mudo"],
+            ).pack(padx=16, anchor="w")
+            candidatas = candidatas_para_vincular(lanc.data, lanc.valor)
+            opcoes_cp = ["(nenhum)"] + [
+                f"#{c.id} - {c.data_vencimento} - {formatar_moeda(c.valor)}"
+                f" - {c.descricao[:30] or c.nome_categoria}"
+                for c in candidatas
+            ]
+            combo_cp = ctk.CTkComboBox(
+                dlg, values=opcoes_cp, state="readonly", width=420,
+            )
+            # Pré-seleciona vínculo existente
+            sel_inicial = "(nenhum)"
+            for i, c in enumerate(candidatas):
+                if c.id == lanc.conta_pagar_id:
+                    sel_inicial = opcoes_cp[i + 1]
+                    break
+            combo_cp.set(sel_inicial)
+            combo_cp.pack(padx=16, pady=(2, 4))
+            ctk.CTkLabel(
+                dlg, text=(
+                    f"{len(candidatas)} candidato(s) com valor R$ "
+                    f"{formatar_moeda(abs(lanc.valor))} em até ±5 dias"
+                ),
+                font=ctk.CTkFont(size=9),
+                text_color=cores["texto_mudo"],
+            ).pack(padx=16, anchor="w", pady=(0, 12))
 
         botoes = ctk.CTkFrame(dlg, fg_color="transparent")
         botoes.pack(fill="x", padx=16, pady=(16, 12))
@@ -533,6 +577,20 @@ class ConciliacaoView(ctk.CTkFrame):
                 categorizar(lanc_id, fonte_receita_id=cand.id)
             else:
                 categorizar(lanc_id, plano_conta_id=cand.id)
+
+            # Salva (ou remove) vínculo com conta_pagar
+            if combo_cp is not None:
+                sel_cp = combo_cp.get()
+                if sel_cp == "(nenhum)":
+                    vincular_conta_pagar(lanc_id, None)
+                else:
+                    # Formato "#42 - 2026-05-10 - ..."
+                    try:
+                        cp_id = int(sel_cp.split(" - ")[0].lstrip("#"))
+                        vincular_conta_pagar(lanc_id, cp_id)
+                    except (ValueError, IndexError):
+                        pass
+
             dlg.destroy()
             self._recarregar()
 

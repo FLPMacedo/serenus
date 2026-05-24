@@ -258,6 +258,73 @@ class TestReaplicarRegras:
         assert listar_lancamentos_mes(5, 2026, conta_b)[0].plano_conta_id is None
 
 
+class TestVincularContaPagar:
+    @pytest.fixture
+    def conta_pagar_factory(self, banco):
+        from database import conectar
+        from datetime import datetime
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        def _criar(valor, data_venc, descricao="X", status="pendente"):
+            with conectar() as conn:
+                cur = conn.execute(
+                    "INSERT INTO contas_pagar (descricao, valor, data_vencimento,"
+                    " status, criado_em) VALUES (?, ?, ?, ?, ?)",
+                    (descricao, valor, data_venc, status, agora),
+                )
+                return cur.lastrowid
+        return _criar
+
+    def test_candidatas_match_exato(self, banco, conta_pagar_factory):
+        from views.fluxo_caixa.extrato_banco_model import candidatas_para_vincular
+        cp_id = conta_pagar_factory(100.0, "2026-05-10", "Energia")
+        # Lançamento de saída de R$ 100 no mesmo dia
+        cands = candidatas_para_vincular("2026-05-10", -100.0)
+        assert len(cands) == 1
+        assert cands[0].id == cp_id
+        assert cands[0].valor == pytest.approx(100.0)
+
+    def test_candidatas_tolera_diferenca_de_dias(self, banco, conta_pagar_factory):
+        from views.fluxo_caixa.extrato_banco_model import candidatas_para_vincular
+        # Conta vence dia 10, pagamento real cai no dia 12
+        conta_pagar_factory(50.0, "2026-05-10")
+        cands = candidatas_para_vincular("2026-05-12", -50.0, dias_tolerancia=5)
+        assert len(cands) == 1
+
+    def test_candidatas_filtra_canceladas(self, banco, conta_pagar_factory):
+        from views.fluxo_caixa.extrato_banco_model import candidatas_para_vincular
+        conta_pagar_factory(100.0, "2026-05-10", status="cancelado")
+        assert candidatas_para_vincular("2026-05-10", -100.0) == []
+
+    def test_candidatas_filtra_por_valor(self, banco, conta_pagar_factory):
+        from views.fluxo_caixa.extrato_banco_model import candidatas_para_vincular
+        conta_pagar_factory(100.0, "2026-05-10")
+        # Valor diferente — não casa
+        assert candidatas_para_vincular("2026-05-10", -200.0) == []
+
+    def test_vincular_persiste_no_lancamento(self, banco, conta, conta_pagar_factory):
+        from views.fluxo_caixa.extrato_banco_model import (
+            importar, listar_lancamentos_mes, vincular_conta_pagar,
+        )
+        cp_id = conta_pagar_factory(50.0, "2026-05-10")
+        importar(conta, [_item("2026-05-10", "Energia", -50.0, "a")])
+        lid = listar_lancamentos_mes(5, 2026, conta)[0].id
+        vincular_conta_pagar(lid, cp_id)
+        l = listar_lancamentos_mes(5, 2026, conta)[0]
+        assert l.conta_pagar_id == cp_id
+
+    def test_desvincular(self, banco, conta, conta_pagar_factory):
+        from views.fluxo_caixa.extrato_banco_model import (
+            importar, listar_lancamentos_mes, vincular_conta_pagar,
+        )
+        cp_id = conta_pagar_factory(50.0, "2026-05-10")
+        importar(conta, [_item("2026-05-10", "X", -50.0, "a")])
+        lid = listar_lancamentos_mes(5, 2026, conta)[0].id
+        vincular_conta_pagar(lid, cp_id)
+        vincular_conta_pagar(lid, None)
+        assert listar_lancamentos_mes(5, 2026, conta)[0].conta_pagar_id is None
+
+
 class TestExcluir:
     def test_excluir_individual(self, conta):
         from views.fluxo_caixa.extrato_banco_model import (
