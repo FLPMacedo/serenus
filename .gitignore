@@ -35,8 +35,12 @@ api_keys.*
 # ─── Backups gerados pelo app ─────────────────────────────────────────────────
 backups/
 
-# ─── Faturas geradas (PDFs com dados sensíveis) ───────────────────────────────
+# ─── Faturas e extratos pessoais (dados sensíveis — nunca versionar) ─────────
+# Estas pastas contêm arquivos REAIS do usuário (PDFs de fatura de cartão,
+# CSV/OFX/PDF de extratos bancários com CPF, valores, descrições, etc).
+# Para arquivos de DEMONSTRAÇÃO use a pasta demos/ (versionada, dados fictícios).
 faturas_modelos/
+Extrato/
 
 # ─── PyInstaller / empacotamento ─────────────────────────────────────────────
 # Scripts de build (.spec / .iss) e binários gerados NÃO vão para o
