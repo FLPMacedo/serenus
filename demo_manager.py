@@ -2066,6 +2066,273 @@ def _inserir_conta_investimento(conn, nome: str, instituicao: str,
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Freelancer/PJ TI alta renda
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Desenvolvedor PJ trabalhando pra empresa internacional. Renda média
+# R$ 18.000/mês (variável, recebimento em USD convertido). Sem CLT.
+# Investe agressivamente (Tesouro + ações tech). Cartão premium.
+# Faz vendas avulsas (cursos, mentorias).
+
+def _popular_freelancer_alta_renda(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET valor_mensal=18000.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 3_200.00, 5),  # apt bom
+        ("Internet",                         199.90, 10),  # fibra 1G
+        ("Streaming (Netflix, Spotify…)",    159.90, 10),  # vários servicos
+        ("Plano de saúde",                   680.00, 15),  # premium
+        ("Telefone / Celular",               139.90, 10),
+        ("Academia",                         189.00, 10),
+        ("Seguro veículo",                   320.00, 20),
+        ("TV por assinatura",                129.90, 10),
+    ]
+    variaveis = [
+        ("Supermercado",            500,  900, 15, 1.0),
+        ("Restaurantes / Delivery", 400,  900, 20, 1.0),
+        ("Combustível",             280,  450, 20, 1.0),
+        ("Cursos online",           150,  500, 20, 0.7),
+        ("Viagens",                   0, 4500, 20, 0.5),
+        ("Luz / Energia elétrica",  120,  240, 12, 1.0),
+        ("Água",                     80,  140, 18, 1.0),
+        ("Manutenção veículo",        0,  600, 20, 0.3),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank Ultravioleta", "nubank", "master", "5590",
+                             "#000000", "#6D28D9", 25_000, 18_500, 1, 22, agora)
+    id_it = _inserir_cartao(conn, "Itaú Black Visa Infinite", "itau", "visa", "5591",
+                             "#000000", "#EC7000", 35_000, 26_800, 15, 5, agora)
+
+    _inserir_compras(conn, [
+        (id_nu, "MacBook Pro M3 16\"",     22_000.0, 24, -8),
+        (id_nu, "Monitor LG UltraWide",     4_500.0, 12, -4),
+        (id_it, "Viagem Japão",            18_000.0, 12, -10),
+        (id_it, "Apple Watch + iPad",       9_800.0, 18, -3),
+    ], hoje)
+
+    # Sem dívidas — renda alta paga tudo
+    _inserir_dividas(conn, [])
+
+    # Vendas: cursos e mentorias técnicas
+    _inserir_vendas(conn, [
+        ("Mentoria 1:1 (5 sessões) cliente A", 2_500.00, "avista", -5, 1),
+        ("Curso 'React Avançado' lote 1",      1_800.00, "avista", -4, 1),
+        ("Mentoria 1:1 cliente B",             1_200.00, "avista", -3, 1),
+        ("Consultoria arquitetura microsserv", 3_500.00, "aprazo", -3, 2),
+        ("Curso 'Sistemas distribuídos'",      2_200.00, "avista", -2, 1),
+        ("Mentoria 1:1 cliente C",             1_400.00, "avista", -1, 1),
+        ("Curso fechado in-company",           5_500.00, "aprazo", -1, 3),
+        ("Mentoria 1:1 cliente D",             1_600.00, "avista",  0, 1),
+    ], hoje)
+
+    # Investimentos agressivos
+    conta_inv_id = _inserir_conta_investimento(conn, "Nu Invest", "Nubank", "corretora", agora)
+    conta_inv_xp = _inserir_conta_investimento(conn, "XP Investimentos", "XP", "corretora", agora)
+
+    ativos_def = [
+        ("PETR4",  "Petrobras PN",          "acao",   conta_inv_id, None, None, None),
+        ("ITUB4",  "Itaú Unibanco PN",      "acao",   conta_inv_id, None, None, None),
+        ("VALE3",  "Vale ON",               "acao",   conta_inv_id, None, None, None),
+        ("BOVA11", "iShares Ibovespa ETF",  "etf",    conta_inv_id, None, None, None),
+        ("CDB-NU-130CDI", "CDB Nu 130% CDI", "cdb",   conta_inv_id, "cdi", 130.0, "2028-06-15"),
+        ("TNLP-SELIC-29", "Tesouro Selic 2029", "tesouro", conta_inv_xp, "selic", None, "2029-09-01"),
+        ("CRIPTO-BTC", "Bitcoin",           "outro",  conta_inv_xp, None, None, None),
+    ]
+    ativo_ids = _criar_ativos_inv(conn, ativos_def, agora)
+
+    movs = [
+        ("PETR4",  "compra", 200, 38.00, -24),
+        ("PETR4",  "compra", 100, 42.00, -10),
+        ("PETR4",  "dividendo", 0, 450.00, -3),
+        ("ITUB4",  "compra", 500, 28.00, -20),
+        ("ITUB4",  "dividendo", 0, 850.00, -3),
+        ("VALE3",  "compra", 200, 65.00, -18),
+        ("BOVA11", "compra", 100, 120.00, -12),
+        ("CDB-NU-130CDI", "aplicacao", 0, 50_000.00, -18),
+        ("TNLP-SELIC-29", "aplicacao", 0, 80_000.00, -24),
+        ("TNLP-SELIC-29", "juros",     0,  4_200.00, -12),
+        ("CRIPTO-BTC", "compra", 0.10, 220_000.00, -18),
+        ("CRIPTO-BTC", "compra", 0.05, 280_000.00,  -6),
+    ]
+    _inserir_movimentacoes_inv(conn, rng, hoje, ativo_ids, movs)
+    _recalcular_posicoes_demo(conn, ativo_ids)
+
+    _inserir_metas(conn, [
+        ("Liberdade financeira (R$ 2M)",
+         2_000_000.0, 480_000.0, _data_offset_str(hoje, 60),
+         "Atingir patrimônio que dispense trabalho"),
+        ("Comprar apartamento à vista",
+         600_000.0, 145_000.0, _data_offset_str(hoje, 36),
+         "Sair do aluguel"),
+    ])
+
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Perfil — MEI dono de loja física
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# MEI com loja pequena (papelaria/utilidades). Renda da loja R$ 4.500
+# médio. Família suporta com cônjuge CLT (R$ 3.000). Catálogo grande,
+# vendas diárias balcão. Aluguel comercial + aluguel residencial. 1
+# cartão pessoal + 1 da loja. Dívida pra capital de giro.
+
+def _popular_mei_loja(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET valor_mensal=3000.0, ativa=1, periodicidade='mensal' WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET valor_mensal=4500.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    conn.executemany(
+        "INSERT INTO receitas_especiais (nome, mes, valor, tipo, recorrente_anual) VALUES (?,?,?,?,1)",
+        [("13º Salário (cônjuge)", 11, 3_000.00, "clt"),
+         ("Vendas de Natal (lote)", 12, 8_000.00, "freela")],
+    )
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 1_500.00, 5),  # residencial
+        ("Internet",                          99.90, 10),
+        ("Plano de saúde",                   320.00, 15),
+        ("Telefone / Celular",               109.90, 10),
+        ("Luz / Energia elétrica",           220.00, 12),  # loja + casa
+        ("Seguro veículo",                   180.00, 20),
+    ]
+    variaveis = [
+        ("Supermercado",            500,  800, 15, 1.0),
+        ("Combustível",             200,  380, 20, 1.0),
+        ("Restaurantes / Delivery",  60,  200, 20, 1.0),
+        ("Farmácia",                 40,  150, 20, 1.0),
+        ("Água",                     90,  160, 18, 1.0),  # loja + casa
+        ("Material escolar",          0,  300, 20, 0.4),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank (pessoal)", "nubank", "master", "5600",
+                             "#6D28D9", "#FFFFFF", 5_000, 3_400, 1, 22, agora)
+    id_pj = _inserir_cartao(conn, "Cartão PJ Loja",   "itau",   "visa",   "5601",
+                             "#EC7000", "#FFFFFF", 8_000, 5_500, 15, 5, agora)
+    _inserir_compras(conn, [
+        (id_nu, "Geladeira nova",        1_800.0, 12, -5),
+        (id_pj, "Estoque inicial loja",  4_200.0, 18, -10),
+        (id_pj, "Reforma fachada",       3_500.0, 12,  -4),
+    ], hoje)
+
+    # Dívida: empréstimo capital de giro
+    _inserir_dividas(conn, [
+        ("Capital de giro Sebrae", "emprestimo", 12_000.0, 580.0, 24, 6, 15, 1.80),
+    ])
+
+    # Produtos da loja (papelaria + utilidades)
+    produtos_ids = _inserir_produtos(conn, [
+        ("Caderno universitário 200fls", "produto", 18.00, ""),
+        ("Caneta esferográfica BIC",     "produto",  2.50, ""),
+        ("Pasta plástica c/ elástico",   "produto",  8.00, ""),
+        ("Calculadora científica Casio", "produto", 89.00, ""),
+        ("Mochila escolar",              "produto", 145.00, ""),
+        ("Lápis HB caixa c/12",          "produto", 12.00, ""),
+        ("Borracha branca grande",       "produto",  3.00, ""),
+        ("Papel sulfite A4 (resma)",     "produto", 28.00, ""),
+        ("Tesoura escolar",              "produto", 14.00, ""),
+        ("Cola branca 90g",              "produto",  7.50, ""),
+    ])
+
+    # Vendas (muitas, balcão diário — 25 vendas em 4 meses)
+    vendas_lote = []
+    for off in range(-4, 1):
+        for descricao, valor in [
+            ("Venda balcão - material escolar", 65.00),
+            ("Venda balcão - cadernos + canetas", 48.00),
+            ("Venda balcão - mochila + estojo", 195.00),
+            ("Venda balcão - papelaria diversa", 32.00),
+            ("Venda balcão - calculadora", 89.00),
+        ]:
+            vendas_lote.append((descricao, valor, "avista", off, 1))
+    _inserir_vendas(conn, vendas_lote, hoje)
+
+    _inserir_metas(conn, [
+        ("Expandir estoque",
+         15_000.0, 4_200.0, _data_offset_str(hoje, 12),
+         "Aumentar variedade de produtos"),
+        ("Trocar caixa registradora",
+          3_500.0, 1_100.0, _data_offset_str(hoje, 8),
+         "Sistema com leitor código de barras"),
+    ])
+
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Estudante universitário
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Estudante de engenharia. Bolsa de estágio R$ 1.500 + bolsa permanência
+# R$ 700 + ajuda família R$ 500 (= receitas especiais mensais). Mora
+# em república. Despesas baixíssimas. 1 cartão limite baixo. Primeira
+# meta: notebook.
+
+def _popular_estudante_universitario(conn, planos, rng, hoje) -> int:
+    # CLT inativo. Freela usado pra "Estágio"
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET valor_mensal=1500.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    # 'Bolsa permanência' e 'Ajuda família' como receitas mensais via campo apropriado
+    # Pra simplicidade, usa receitas_especiais (mas mensal — recorrente_anual=0 não existe;
+    # vai como receita pontual mensal projetada via planos especiais).
+    # Alternativa mais simples: somar tudo em 'Freela / Estágio'.
+    conn.execute(
+        "UPDATE fontes_receita SET valor_mensal=2700.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'"
+    )
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel",  550.00, 5),  # república
+        ("Internet",                          69.90, 10),
+        ("Streaming (Netflix, Spotify…)",     29.90, 10),
+        ("Telefone / Celular",                49.90, 10),
+        ("Plano de saúde",                   140.00, 15),  # plano básico
+    ]
+    variaveis = [
+        ("Supermercado",            250,  400, 15, 1.0),
+        ("Restaurantes / Delivery",  60,  180, 20, 1.0),
+        ("Transporte público",       80,  150, 20, 1.0),
+        ("Material escolar",          0,  180, 20, 0.5),
+        ("Cursos online",             0,  200, 20, 0.3),
+        ("Farmácia",                 20,   80, 20, 0.6),
+        ("Luz / Energia elétrica",   50,  100, 12, 1.0),  # rateio
+        ("Água",                     30,   60, 18, 1.0),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng,
+                                  offset_range=range(-12, 7))
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank Mais", "nubank", "master", "5610",
+                             "#6D28D9", "#FFFFFF", 1_500, 1_050, 1, 22, agora)
+    _inserir_compras(conn, [
+        (id_nu, "Livros do semestre",  480.0, 6, -3),
+        (id_nu, "Calculadora HP12C",   320.0, 4, -2),
+    ], hoje)
+
+    _inserir_dividas(conn, [])
+
+    _inserir_metas(conn, [
+        ("Notebook novo",
+          4_500.0, 1_200.0, _data_offset_str(hoje, 8),
+         "Atual está velho — precisa pra projetos"),
+        ("Curso de inglês",
+          3_000.0,   500.0, _data_offset_str(hoje, 12),
+         "Conversação avançada"),
+        ("Intercâmbio (entrada)",
+         15_000.0, 2_400.0, _data_offset_str(hoje, 24),
+         "Programa de 6 meses no exterior"),
+    ])
+
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Entry point público
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -2091,6 +2358,9 @@ _PERFIL_FNS = {
     "casal_planejando":        _popular_casal_planejando,
     "aposentado_classico":     _popular_aposentado_classico,
     "aposentado_investidor":   _popular_aposentado_investidor,
+    "freelancer_alta_renda":   _popular_freelancer_alta_renda,
+    "mei_loja":                _popular_mei_loja,
+    "estudante_universitario": _popular_estudante_universitario,
 }
 
 
