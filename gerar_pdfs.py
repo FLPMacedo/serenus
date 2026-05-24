@@ -153,7 +153,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 <h1>{titulo}</h1>
-<div class="subtitle">Versão 2.1.0 · Documentação oficial</div>
+<div class="subtitle">Versão 2.3.0 · Documentação oficial</div>
 {conteudo}
 <div id="footer_content" style="text-align: center; color: #9CA3AF; font-size: 9pt;">
 Página <pdf:pagenumber/> de <pdf:pagecount/> — Serenus

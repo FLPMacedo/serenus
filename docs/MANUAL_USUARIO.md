@@ -1,7 +1,14 @@
 # Serenus — Manual do Usuário
 
-> **Versão 2.0** · Português BR  
+> **Versão 2.3.0** · Português BR  
 > *Sistema de finanças pessoais e para pequenos negócios*
+>
+> **Novidades v2.3.0** —
+> Importação de fatura PDF com 6 emissores (Nubank, Itaú, Credicard, Luizacred,
+> Digio, Will, Mercado Livre), módulo de **Conciliação Bancária** (CSV/OFX/PDF
+> de extratos), lançamentos manuais avulsos no Fluxo de Caixa, regras
+> automáticas de categorização e 20 perfis demo. Veja `MANUAL_DEMOS.md`
+> para o guia completo dos perfis.
 
 ---
 
@@ -12,18 +19,18 @@
 3. [Minhas Receitas](#3-minhas-receitas)
 4. [Contas a Pagar](#4-contas-a-pagar)
 5. [Vendas](#5-vendas)
-6. [Cartões de Crédito](#6-cartões-de-crédito)
+6. [Cartões de Crédito](#6-cartões-de-crédito) — *inclui importação PDF de 7 emissores (v2.3.0)*
 7. [Gerenciamento de Dívidas](#7-gerenciamento-de-dívidas)
 8. [Plano de Contas](#8-plano-de-contas)
 9. [Visão Financeira](#9-visão-financeira)
-10. [Fluxo de Caixa](#10-fluxo-de-caixa)
+10. [Fluxo de Caixa](#10-fluxo-de-caixa) — *agora com aba **Conciliação Bancária** + lançamentos manuais (v2.3.0)*
 11. [Investimentos](#11-investimentos)
 12. [Metas Financeiras](#12-metas-financeiras)
 13. [Backup e Restauração](#13-backup-e-restauração)
 14. [Configurações](#14-configurações)
 15. [Exportação para Excel](#15-exportação-para-excel)
 16. [Alertas Automáticos](#16-alertas-automáticos)
-17. [Modo Demonstração](#17-modo-demonstração)
+17. [Modo Demonstração](#17-modo-demonstração) — *20 perfis em 4 categorias (v2.3.0)*
 18. [Ordens de Serviço (interna)](#18-ordens-de-serviço-interna)
 
 ---
@@ -358,6 +365,42 @@ Clique em **Ver faturas** em um cartão. A tela mostra todas as parcelas do mês
 
 Na tela de faturas, clique em **Lançar fatura em contas a pagar** para criar um único lançamento de despesa no valor total da fatura do mês. Útil para quem quer controlar pelo débito no banco em vez de parcela a parcela.
 
+### 6.6 Importando fatura PDF *(v2.3.0)*
+
+Além de CSV/XLSX, o Serenus agora lê a **fatura em PDF** direto, sem precisar exportar pra planilha. Suporta 6 emissores diferentes:
+
+| Emissor | Marcador detectado | Senha |
+|---------|--------------------|-------|
+| **Nubank** | "Nu Pagamentos S.A." | Sem senha |
+| **Itaú** (Uniclass, Click, Black) | "Lançamentos: compras e saques" | Quando aplicável |
+| **Credicard** | Processado pelo emissor Itaú — mesmo parser | Quando aplicável |
+| **Magazine Luiza (Luizacred)** | "LUIZACRED S/A SCFI" | Sem senha |
+| **Digio** | "digio.com.br" / "Cartão Digio" | Sem senha |
+| **Will Bank** | "Will Financeira" / "willbank.com.br" | Sem senha |
+| **Mercado Pago / Mercado Livre** | "Mercado Pago" / "MERCADOLIVRE*" | Sem senha |
+
+#### Passo a passo
+
+1. Na tela de Cartões, no cartão desejado, clique em **⬆ Importar** → escolha **PDF**
+2. Selecione o arquivo PDF da fatura
+3. Se o PDF for protegido, o sistema pede a senha
+4. O sistema detecta automaticamente o emissor e mostra a pré-visualização
+5. Revise os itens, marque/desmarque "Criar histórico das parcelas já pagas"
+6. Clique em **⬆ Importar**
+
+> **Limitação conhecida — Magazine Luiza:** o PDF da Luizacred tem layout em
+> colunas que o `pypdf` não preserva, então o parser extrai TODAS as
+> transações (incluindo projeções de próximas faturas). Você precisa
+> desmarcar manualmente as parcelas que NÃO são da fatura atual no preview
+> antes de importar.
+
+#### OCR para PDFs escaneados
+
+Se o PDF não tiver texto extraível (ex.: foto/scan), o sistema oferece OCR
+automático **se** as bibliotecas `pytesseract` + `pdf2image` + Tesseract
+nativo estiverem instaladas. Caso contrário, mostra mensagem clara orientando
+a instalação opcional.
+
 ---
 
 ## 7. Gerenciamento de Dívidas
@@ -459,7 +502,9 @@ Clique em **⬇ Excel** para baixar a projeção completa em planilha.
 
 ![Fluxo de Caixa — extrato detalhado de lançamentos com gráfico e filtros](screenshots/09_fluxo_de_caixa_extrato.png)
 
-O Fluxo de Caixa é a tela inicial (Dashboard) e mostra a situação financeira consolidada.
+> **v2.3.0** — esta tela agora tem **2 abas**: **📋 Movimentações** (extrato
+> consolidado, conteúdo histórico) e **🏦 Conciliação Bancária** (extratos
+> bancários importados, ver §10.5).
 
 ### 10.1 Painel de resumo
 
@@ -468,7 +513,7 @@ O Fluxo de Caixa é a tela inicial (Dashboard) e mostra a situação financeira 
 - **Despesa média** — despesa mensal média
 - **Meses no azul / vermelho** — quantos meses com saldo positivo/negativo
 
-### 10.2 Extrato mensal
+### 10.2 Extrato mensal (aba Movimentações)
 
 Selecione um mês para ver o extrato detalhado com todas as movimentações: receitas de fontes, rendimentos de investimento, vendas e serviços, e despesas de cada categoria.
 
@@ -476,10 +521,132 @@ Recursos do extrato:
 - **Busca** — campo de texto para filtrar por descrição
 - **Filtro por tipo** — Todos / Receitas / Despesas
 - **⬇ Excel** — exporta o extrato do mês
+- **+ Lançar** — abre modal de lançamento manual (ver §10.4) *(v2.3.0)*
 
 ### 10.3 Gráfico
 
 Barras agrupadas com receitas × despesas e linha de saldo ao longo do horizonte selecionado (3, 6, 12, 24 ou 36 meses).
+
+### 10.4 Lançamentos manuais *(v2.3.0)*
+
+Um **lançamento manual** é uma entrada ou saída pontual de dinheiro que NÃO
+vem de contas_pagar nem das automações (vendas, investimentos, fontes de
+receita fixas). Casos típicos: "recebi R$ 50 em dinheiro de alguém",
+"paguei lanche em espécie", "transferência avulsa".
+
+#### Lançando
+
+1. Na aba **Movimentações**, clique em **+ Lançar** no header
+2. No modal:
+   - **Tipo**: 🟢 Entrada ou 🔴 Saída
+   - **Data** (DD/MM/AAAA, máscara automática)
+   - **Descrição** livre
+   - **Categoria** obrigatória — combo muda conforme tipo:
+     - Saída → Plano de Contas (Supermercado, Combustível, etc)
+     - Entrada → Fontes de Receita (Salário CLT, Aluguel, Freela, etc)
+   - **Valor (R$)** com máscara monetária
+   - **Observação** opcional
+3. Clique em **💾 Salvar**
+
+#### Editando ou excluindo
+
+Lançamentos manuais aparecem no extrato igual qualquer outra linha. Para
+editar ou excluir, **duplo-clique** na linha — o mesmo modal abre em modo
+edição com botão **🗑 Excluir** adicional.
+
+> Lançamentos manuais NÃO entram na projeção de Visão Futura (são avulsos
+> por natureza, não recorrentes).
+
+### 10.5 Conciliação Bancária *(v2.3.0)*
+
+A aba **🏦 Conciliação Bancária** permite importar o extrato real do seu banco
+(CSV, OFX ou PDF) e reconciliar com os lançamentos do Serenus.
+
+#### 10.5.1 Cadastrando uma conta bancária
+
+1. Na aba Conciliação, clique em **+ Conta**
+2. Preencha:
+   - **Nome** da conta (ex.: "Nubank Principal")
+   - **Banco** (ex.: "Nubank", "Itaú Unibanco")
+   - **Tipo**: Conta Corrente / Conta Digital / Poupança / Conta Salário / Outra
+   - **Agência** e **número** (opcionais, só pra organização)
+   - **Saldo inicial (R$)** — saldo no banco no momento do cadastro
+3. Clique em **💾 Salvar**
+
+Cada conta tem seu próprio extrato. O **saldo atual** mostrado é
+calculado: saldo_inicial + soma dos lançamentos importados.
+
+#### 10.5.2 Importando extrato
+
+1. Selecione a conta no combo do topo
+2. Clique em **⬆ Importar**
+3. No modal:
+   - Confirme a conta de destino
+   - Clique em **📂 Escolher** e selecione o arquivo
+   - O sistema detecta automaticamente o formato (CSV/OFX/PDF) e o banco
+   - Pré-visualização mostra período, total de lançamentos, entradas, saídas, saldo
+4. Clique em **⬆ Importar**
+
+**Formatos suportados:**
+
+| Banco | CSV | OFX | PDF |
+|-------|-----|-----|-----|
+| **Nubank** | ✅ formato padrão (Data,Valor,Identificador,Descrição) | ✅ OFX 1.0.2 SGML | — (não recomendado, use CSV/OFX) |
+| **Itaú** | — | — | ✅ extrato semestral |
+
+#### 10.5.3 Dedup automático
+
+Se importar o mesmo extrato duas vezes, o sistema detecta lançamentos
+duplicados pelo **identificador único** (UUID do banco no CSV/OFX, ou hash
+gerado pra PDF) e ignora os repetidos.
+
+Resultado da importação:
+- **Novos**: quantos lançamentos foram inseridos
+- **Duplicados**: quantos já existiam (ignorados)
+- **Categorizados automaticamente**: quantos casaram com alguma regra
+
+#### 10.5.4 Categorização (3 modos)
+
+**Modo 1 — Manual por lançamento:**
+Duplo-clique numa linha do extrato → modal mostra combo de categoria
+(saída: Plano de Contas; entrada: Fontes de Receita).
+
+**Modo 2 — Regras automáticas:**
+Botão **⚙ Regras** abre o gerenciador. Crie regras tipo
+*"LANCHONETE → Restaurantes / Delivery"* — quando importar extratos novos,
+o sistema aplica automaticamente. Regras têm prioridade (maior vence).
+
+**Modo 3 — Re-aplicar regras em existentes:**
+Botão **↻ Re-aplicar** roda as regras ativas nos lançamentos JÁ importados.
+Útil quando você cadastra uma regra nova depois de importar. Por padrão
+**não sobrescreve categorias manuais** (proteção das suas escolhas).
+
+#### 10.5.5 Conciliação com contas_pagar
+
+Quando uma despesa programada (conta_pagar) é paga, ela também aparece no
+extrato do banco como saída. **Vincular** o lançamento bancário à
+conta_pagar correspondente sinaliza "essa saída JÁ está representada no
+fluxo" e evita futuras duplicações em relatórios consolidados.
+
+1. Duplo-clique numa linha de saída
+2. No modal, seção **Vincular com conta a pagar** mostra candidatas
+   (filtradas por data ±5d e valor ±R$0,01)
+3. Selecione a conta_pagar correspondente
+4. Clique em **💾 Salvar**
+
+A linha vinculada ganha o ícone 🔗 na descrição.
+
+#### 10.5.6 Marcar como conciliado
+
+Cada linha tem um checkbox **✓** à direita. Marque quando confirmar que o
+lançamento está revisado/categorizado. Os filtros **Pendentes / Conciliados**
+ajudam a focar no que falta revisar.
+
+#### 10.5.7 Excluir lançamento
+
+No modal de categorização (duplo-clique), botão **🗑 Excluir** remove o
+lançamento. Útil pra linhas mal parseadas (ex.: "SALDO DO DIA" do Itaú
+que escapou do filtro). Re-importar o mesmo extrato traz a linha de volta.
 
 ---
 
@@ -659,13 +826,61 @@ Os alertas são gerados automaticamente ao abrir o app e atualizados a cada 30 s
 
 Para explorar o sistema com dados completos sem precisar cadastrar nada:
 
-1. Vá em **Configurações → Dados de demonstração**
-2. Selecione o perfil desejado (veja tabela na seção 2.4)
-3. Clique em **Carregar perfil**
+1. Vá em **Configurações → 🎭 Modo Demonstrativo**
+2. Selecione o perfil desejado no combo
+3. Clique em **Ativar Modo Demo**
 
-Os dados populados incluem: contas a pagar, fontes de receita, cartões com compras parceladas, dívidas, produtos, vendas, investimentos e metas — com histórico de meses anteriores e projeção futura já preenchidos.
+> ⚠️ O sistema **zera os dados existentes** antes de popular o perfil.
+> Faça backup pelo módulo Backup se tiver dados próprios.
 
-Para experimentar a **importação de fatura**, use o modo demonstração (perfil "Padrão" tem 2 cartões), depois baixe o template XLSX, preencha com itens de teste e importe.
+### 17.1 Os 20 perfis disponíveis *(v2.3.0)*
+
+A partir da v2.3.0, o Modo Demo tem **20 perfis** organizados em 4 categorias:
+
+#### 🟢 Cotidiano (3)
+- **padrao** — Classe média. Bom pra demo geral.
+- **apertado** — Renda baixa, 6 cartões fragmentados.
+- **no_verde** — Sobra ~R$ 500/mês.
+
+#### 🔴 Trajetória de dívida (6 — narrativa em sequência)
+- **moderado_dividas** — começo do problema.
+- **endividado_6m** — 6 meses de rotativo, 3 cartões 80%+.
+- **endividado_1a** — 1 ano de bola de neve, fatura atrasada.
+- **bem_endividado** — parcelas comprometem 54% da renda.
+- **muito_endividado** — crítico: 8 cartões, 2 faturas atrasadas, cheque especial estourado.
+- **moderado_recuperando** — saindo do buraco.
+
+#### 📈 Investidores (3)
+- **primeiro_passo** — começando a investir (Tesouro + CDB).
+- **em_ritmo** — carteira diversificada de 3 anos.
+- **patrimonio_crescendo** — FIIs + ações + cripto.
+
+#### 👥 Profissionais / vida (8)
+- **profissional_informal** — designer freela + aluguel + vendas avulsas.
+- **prestador_servico** — eletricista. ⭐ ÚNICO com OS + Clientes + Produtos integrados.
+- **casal_planejando** — 5 metas grandes (apto, casamento, viagem).
+- **aposentado_classico** — INSS + bicos.
+- **aposentado_investidor** — vive de dividendos (FIRE).
+- **freelancer_alta_renda** — Dev PJ R$ 18k/mês + carteira agressiva + cripto.
+- **mei_loja** — papelaria com vendas balcão diárias.
+- **estudante_universitario** — bolsa + estágio + ajuda família.
+
+### 17.2 Arquivos demo prontos pra importação *(v2.3.0)*
+
+Cada perfil traz **arquivos prontos** em `demos/<perfil>/` pra demonstrar
+importação:
+
+- `demos/<perfil>/cartoes/fatura_<banco>_<mes>.xlsx` — planilha importável
+  pelo módulo de Cartões
+- `demos/<perfil>/extratos/extrato_nubank_<mes>.csv` — extrato CSV
+- `demos/<perfil>/extratos/extrato_nubank_<mes>.ofx` — extrato OFX
+
+Todos os arquivos são **gerados programaticamente** (não fictícios soltos —
+refletem o histórico real do perfil) e passam pelo round-trip dos parsers
+do próprio Serenus.
+
+> Veja `docs/MANUAL_DEMOS.md` para o guia completo dos 20 perfis com
+> roteiros prontos pra videoaulas e apresentações comerciais.
 
 ---
 

@@ -2,7 +2,11 @@
 
 > Guia hands-on com **fluxo visual completo** de cada operação.
 > Cada capítulo mostra: a tela do módulo → o formulário de cadastro → o resultado.
-> Versão 2.1.0 · Português BR
+> Versão 2.3.0 · Português BR
+>
+> **Novos capítulos v2.3.0**: 18 (importar fatura PDF), 19 (importar
+> extrato bancário CSV/OFX/PDF), 20 (lançar manual + conciliar com
+> conta_pagar). Veja também `MANUAL_DEMOS.md` para o guia dos 20 perfis demo.
 
 ---
 
@@ -685,6 +689,139 @@ Nome padrão do arquivo: `OS-0002.pdf`.
 Clique em **📋 Histórico** em qualquer card para abrir a timeline. Útil em auditorias: quem mudou o quê, quando.
 
 ⚠️ **OS interna não vai pro financeiro:** Materiais e mão de obra ficam **só** na OS. Não geram contas a pagar, nem aparecem no extrato/Visão Financeira. Se quiser registrar o custo no financeiro, lance manualmente em **💸 Contas a Pagar** referenciando o número da OS na descrição.
+
+---
+
+## 18. Importando fatura de cartão em PDF *(v2.3.0)*
+
+Use quando você tem o **PDF original da fatura** do banco e não quer
+exportar pra planilha. O Serenus reconhece 7 emissores diferentes.
+
+**Pré-requisitos:** já ter o cartão cadastrado no módulo Cartões.
+
+**Tela inicial:**
+![Cartões](screenshots/05_cartoes.png)
+
+**Passo a passo:**
+
+1. Sidebar → **💳 Cartões**
+2. No cartão desejado, clique em **⬆ Importar**
+3. Na escolha de formato, clique em **PDF**
+4. Selecione o arquivo PDF da fatura no `filedialog`
+5. **Se o PDF for protegido por senha**, o sistema pede inline
+6. Sistema detecta automaticamente o emissor e mostra preview com:
+   - N itens detectados, total R$
+   - Layout reconhecido (nubank, itau, luizacred, digio, will, mercadolivre)
+7. Revise os itens, marque/desmarque **"Criar histórico das parcelas já pagas"**
+8. (Opcional) Informe **Vencimento (DD/MM/AAAA)** se quiser sobrescrever a
+   data padrão das parcelas
+9. Clique em **⬆ Importar**
+
+**Resultado:** as compras viram parcelas em `parcelas_cartao`, o limite é
+debitado, e o gráfico de utilização do cartão atualiza.
+
+✅ **Dica:** dedup automático — se você importar a mesma fatura 2 vezes,
+nada duplica. O Serenus identifica pela chave (cartão, descrição, mês,
+parcela).
+
+⚠️ **Magazine Luiza tem limitação conhecida:** o layout do PDF Luizacred
+mistura "lançamentos atuais" com "compras parceladas - próximas faturas"
+no texto extraído. Você precisa **desmarcar manualmente** no preview as
+parcelas que NÃO são da fatura atual.
+
+---
+
+## 19. Importando extrato bancário *(v2.3.0)*
+
+Use pra trazer o extrato do seu banco (Nubank, Itaú) pra dentro do Serenus
+e poder conciliar com as despesas programadas.
+
+**Pré-requisitos:** nada — o cadastro de conta bancária acontece no fluxo.
+
+**Tela inicial:** Fluxo de Caixa → aba **🏦 Conciliação Bancária**.
+
+**Passo 1 — Cadastrar a conta bancária (se ainda não cadastrou):**
+
+1. Sidebar → **🔄 Fluxo de Caixa** → aba **🏦 Conciliação Bancária**
+2. Clique em **+ Conta**
+3. Preencha: nome, banco, tipo (Conta Digital/Corrente/Poupança),
+   agência, número, saldo inicial
+4. **💾 Salvar**
+
+**Passo 2 — Importar o extrato:**
+
+1. Na mesma aba, selecione a conta no combo do topo
+2. Clique em **⬆ Importar**
+3. No modal:
+   - Confirme a conta de destino
+   - **📂 Escolher** → selecione o arquivo (`.csv`, `.ofx` ou `.pdf`)
+4. Sistema detecta formato + banco automaticamente, mostra preview:
+   - **Período**: data primeira/última transação
+   - **Total**: quantos lançamentos
+   - **Entradas / Saídas / Saldo**
+5. Clique em **⬆ Importar**
+
+**Formatos suportados:**
+
+| Banco | CSV | OFX | PDF |
+|-------|-----|-----|-----|
+| Nubank | ✅ | ✅ | (use CSV/OFX, é melhor) |
+| Itaú | — | — | ✅ (extrato semestral) |
+
+**Resultado:**
+- `N novos | M duplicados (ignorados) | K categorizados automaticamente`
+- Lançamentos aparecem na lista da conta
+- Saldo da conta atualizado automaticamente
+
+**Próximos passos opcionais:**
+
+- **Categorizar** lançamentos: duplo-clique numa linha → modal com combo
+  de Plano de Contas (saída) ou Fontes de Receita (entrada)
+- **Conciliar** com conta_pagar: no mesmo modal, seção "Vincular com
+  conta a pagar" → escolher candidata (filtro automático por data ±5d e
+  valor ±R$0,01). Linhas vinculadas ganham ícone **🔗** na descrição.
+- **Marcar como revisado**: checkbox **✓** na ponta direita da linha
+
+---
+
+## 20. Lançando entrada/saída avulsa no extrato *(v2.3.0)*
+
+Use quando o dinheiro **não vem** de uma despesa programada nem de uma
+receita fixa. Exemplos: "recebi R$ 50 em dinheiro do meu pai", "paguei
+lanche em espécie", "vendi item usado por R$ 200".
+
+**Tela inicial:** Fluxo de Caixa → aba **📋 Movimentações**.
+
+**Passo a passo:**
+
+1. Sidebar → **🔄 Fluxo de Caixa**
+2. Na aba **📋 Movimentações** (padrão), clique em **+ Lançar** no header
+3. No modal:
+   - **Tipo**: clique no radio 🟢 **Entrada** ou 🔴 **Saída**
+   - **Data** (DD/MM/AAAA — máscara automática)
+   - **Descrição** livre
+   - **Categoria** obrigatória — o combo muda de acordo com o tipo:
+     - **Saída** → lista do Plano de Contas (Supermercado, Combustível,
+       Restaurantes, etc)
+     - **Entrada** → lista de Fontes de Receita (Salário CLT, Aluguel,
+       Freela, etc)
+   - **Valor (R$)** — máscara monetária (digite só números)
+   - **Observação** opcional
+4. Clique em **💾 Salvar**
+
+**Resultado:** o lançamento aparece imediatamente no extrato do mês
+correspondente, marcado internamente como `origem='manual'`.
+
+**Editando ou excluindo depois:**
+
+- **Duplo-clique** numa linha do extrato — se for um lançamento manual,
+  o mesmo modal reabre em modo edição
+- Em modo edição, aparece botão **🗑 Excluir** que remove definitivamente
+
+⚠️ **Não entra na Visão Futura:** lançamentos manuais são considerados
+avulsos por natureza (não recorrentes), então não são projetados pra
+meses futuros. Use **Contas a Pagar** ou **Fontes de Receita** se quiser
+recorrência.
 
 ---
 
