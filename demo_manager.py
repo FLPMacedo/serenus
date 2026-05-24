@@ -1,8 +1,22 @@
 """
 demo_manager.py — Dados demonstrativos para o Serenus.
-8 perfis financeiros: padrão, apertado, moderado_dividas,
-moderado_recuperando, no_verde, primeiro_passo, em_ritmo,
-patrimonio_crescendo.
+
+20 perfis financeiros divididos em categorias:
+
+  Renda/cotidiano:
+    padrao, apertado, no_verde
+
+  Trajetória de dívida (do início ao crítico):
+    moderado_dividas, endividado_6m, endividado_1a,
+    bem_endividado, muito_endividado, moderado_recuperando
+
+  Investidores (do iniciante ao consolidado):
+    primeiro_passo, em_ritmo, patrimonio_crescendo
+
+  Perfis profissionais/vida:
+    profissional_informal, prestador_servico, casal_planejando,
+    aposentado_classico, aposentado_investidor, freelancer_alta_renda,
+    mei_loja, estudante_universitario
 """
 from __future__ import annotations
 import random
@@ -13,14 +27,30 @@ from database import conectar, salvar_configuracao
 _RNG = random.Random(42)
 
 PERFIS_DEMO: dict[str, str] = {
-    "padrao":               "Padrão (Classe Média)",
-    "apertado":             "Apertado (Renda baixa / muitos cartões)",
-    "moderado_dividas":     "Moderado entrando em dívidas",
-    "moderado_recuperando": "Moderado saindo das dívidas",
-    "no_verde":             "No verde (Sobra ~R$500/mês)",
-    "primeiro_passo":       "Primeiro Passo (Começando a investir)",
-    "em_ritmo":             "Em Ritmo (Investidor há 3 anos)",
-    "patrimonio_crescendo": "Patrimônio Crescendo (Carteira consolidada)",
+    # ── Cotidiano ─────────────────────────────────────────────────────
+    "padrao":                  "Padrão (Classe Média)",
+    "apertado":                "Apertado (Renda baixa / muitos cartões)",
+    "no_verde":                "No verde (Sobra ~R$500/mês)",
+    # ── Trajetória de dívida ─────────────────────────────────────────
+    "moderado_dividas":        "Moderado entrando em dívidas",
+    "endividado_6m":           "Endividado há 6 meses",
+    "endividado_1a":           "Endividado há 1 ano",
+    "bem_endividado":          "Bem endividado (parcelas 50%+ da renda)",
+    "muito_endividado":        "Muito endividado (cheque especial estourado)",
+    "moderado_recuperando":    "Moderado saindo das dívidas",
+    # ── Investidores ──────────────────────────────────────────────────
+    "primeiro_passo":          "Primeiro Passo (Começando a investir)",
+    "em_ritmo":                "Em Ritmo (Investidor há 3 anos)",
+    "patrimonio_crescendo":    "Patrimônio Crescendo (Carteira consolidada)",
+    # ── Profissionais/vida ───────────────────────────────────────────
+    "profissional_informal":   "Profissional Informal (múltiplas rendas)",
+    "prestador_servico":       "Prestador de Serviço (eletricista + OS)",
+    "casal_planejando":        "Casal planejando o futuro",
+    "aposentado_classico":     "Aposentado (INSS + complemento)",
+    "aposentado_investidor":   "Aposentado vivendo de dividendos",
+    "freelancer_alta_renda":   "Freelancer/PJ TI (renda alta variável)",
+    "mei_loja":                "MEI dono de loja física",
+    "estudante_universitario": "Estudante universitário",
 }
 
 
@@ -1075,18 +1105,337 @@ def _recalcular_posicoes_demo(conn, ativo_ids: dict[str, int]) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Endividado há 6 meses
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Comprou várias coisas parceladas há 6 meses, fatura subiu, começou rotativo.
+# Cartões em 75-85% de uso. 1 empréstimo recente. Sem investimentos. Sem metas.
+# Despesas crescem 1.5% ao mês a partir de 6 meses atrás.
+
+def _popular_endividado_6m(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET valor_mensal=4500.0, ativa=1, periodicidade='mensal' WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    conn.executemany(
+        "INSERT INTO receitas_especiais (nome, mes, valor, tipo, recorrente_anual) VALUES (?,?,?,?,1)",
+        [("13º Salário", 11, 4_500.00, "clt")],
+    )
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 1_400.00, 5),
+        ("Internet",                         109.90, 10),
+        ("Streaming (Netflix, Spotify…)",     59.90, 10),
+        ("Plano de saúde",                   250.00, 15),
+        ("Telefone / Celular",                89.90, 10),
+        ("Academia",                          89.00, 10),
+    ]
+
+    # Despesas crescem ~1.5% ao mês a partir de -6 (estouro recente)
+    def fator_endividado_6m(offset: int) -> float:
+        if offset < -6:
+            return 0.85  # antes do problema, gasto menor
+        return min(1.40, 1.0 + (offset + 6) * 0.015)
+
+    variaveis = [
+        ("Supermercado",            500,  900, 15, 1.0),
+        ("Combustível",             280,  450, 20, 1.0),
+        ("Restaurantes / Delivery", 120,  350, 20, 1.0),
+        ("Farmácia",                 40,  180, 20, 1.0),
+        ("Água",                     70,  130, 18, 1.0),
+        ("Luz / Energia elétrica",  120,  260, 12, 1.0),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng,
+                                  fator_fn=fator_endividado_6m)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank",        "nubank", "master", "5501",
+                             "#6D28D9", "#FFFFFF",  4_000,   600, 1,  22, agora)
+    id_it = _inserir_cartao(conn, "Itaú Click",    "itau",   "visa",   "5502",
+                             "#EC7000", "#FFFFFF",  3_500,   500, 15,  5, agora)
+    id_cr = _inserir_cartao(conn, "Credicard",     "itau",   "master", "5503",
+                             "#0033A0", "#FFFFFF",  3_000,   400, 18,  8, agora)
+
+    _inserir_compras(conn, [
+        (id_nu, "Smart TV 50\"",       2_400.0, 18, -6),
+        (id_nu, "Geladeira frost-free",1_800.0, 12, -5),
+        (id_it, "Sofá retrátil",       1_500.0, 10, -4),
+        (id_it, "Notebook Lenovo",     2_200.0, 18, -3),
+        (id_cr, "Conserto carro",      1_200.0, 10, -2),
+        (id_cr, "Reforma cozinha",       900.0,  6,  0),
+    ], hoje)
+
+    _inserir_dividas(conn, [
+        ("Empréstimo pessoal Bradesco", "emprestimo", 9_000.0, 480.0, 24,  4, 10, 2.40),
+    ])
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Endividado há 1 ano
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# 1 ano de bola de neve. Renda estagnada. 4 cartões com 90% de uso.
+# 1 fatura atrasada (status='pendente' com vencimento passado).
+# Tem empréstimo + cheque especial (modelado como tipo='emprestimo' por compat).
+
+def _popular_endividado_1a(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET valor_mensal=5000.0, ativa=1, periodicidade='mensal' WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    conn.executemany(
+        "INSERT INTO receitas_especiais (nome, mes, valor, tipo, recorrente_anual) VALUES (?,?,?,?,1)",
+        [("13º Salário", 11, 5_000.00, "clt")],
+    )
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 1_500.00, 5),
+        ("Internet",                         109.90, 10),
+        ("Streaming (Netflix, Spotify…)",     69.90, 10),
+        ("Plano de saúde",                   320.00, 15),
+        ("Telefone / Celular",                99.90, 10),
+        ("Academia",                          99.00, 10),
+        ("Seguro veículo",                   190.00, 20),
+    ]
+
+    # Cresce 1.2% ao mês há 12 meses — agravamento sustentado
+    def fator_endividado_1a(offset: int) -> float:
+        if offset < -12:
+            return 0.80
+        return min(1.50, 1.0 + (offset + 12) * 0.012)
+
+    variaveis = [
+        ("Supermercado",            550,  950, 15, 1.0),
+        ("Combustível",             300,  500, 20, 1.0),
+        ("Restaurantes / Delivery", 150,  400, 20, 1.0),
+        ("Farmácia",                 60,  220, 20, 1.0),
+        ("Água",                     80,  140, 18, 1.0),
+        ("Luz / Energia elétrica",  140,  290, 12, 1.0),
+        ("Manutenção veículo",        0,  600, 20, 0.6),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng,
+                                  fator_fn=fator_endividado_1a)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank",        "nubank",   "master", "5510",
+                             "#6D28D9", "#FFFFFF",  5_000,   350, 1,  22, agora)
+    id_it = _inserir_cartao(conn, "Itaú Visa",     "itau",     "visa",   "5511",
+                             "#EC7000", "#FFFFFF",  4_000,   300, 15,  5, agora)
+    id_br = _inserir_cartao(conn, "Bradesco MC",   "bradesco", "master", "5512",
+                             "#CC092F", "#FFFFFF",  4_500,   400, 10,  1, agora)
+    id_sa = _inserir_cartao(conn, "Santander",     "santander","visa",   "5513",
+                             "#EC0000", "#FFFFFF",  3_500,   250, 20, 10, agora)
+
+    _inserir_compras(conn, [
+        (id_nu, "MacBook Air",         5_500.0, 24, -11),
+        (id_nu, "iPhone parcelado",    4_800.0, 24,  -9),
+        (id_it, "Viagem família",      4_200.0, 18,  -8),
+        (id_it, "Reforma apartamento", 6_000.0, 24,  -6),
+        (id_br, "Móveis quarto",       2_400.0, 12,  -4),
+        (id_br, "Eletrodomésticos",    1_800.0, 10,  -2),
+        (id_sa, "Pneus + revisão",     1_500.0, 10,  -1),
+        (id_sa, "Roupas inverno",        900.0,  6,   0),
+    ], hoje)
+
+    # 1 fatura atrasada (já passou do vencimento mas continua pendente)
+    venc_atraso = _fmt(date(hoje.year, hoje.month, _dia_seguro(hoje.year, hoje.month, 1)))
+    if venc_atraso < _fmt(hoje):
+        pid = planos.get("Outros")
+        if pid:
+            conn.execute(
+                "INSERT INTO contas_pagar (plano_conta_id, descricao, valor,"
+                " data_vencimento, status, recorrente, criado_em)"
+                " VALUES (?, ?, ?, ?, 'pendente', 0, ?)",
+                (pid, "Fatura cartão (em atraso)", 1_200.0, venc_atraso, agora),
+            )
+            total += 1
+
+    _inserir_dividas(conn, [
+        ("Empréstimo pessoal Caixa",   "emprestimo",     22_000.0,  920.0, 36, 12, 10, 2.20),
+        ("Cheque especial Bradesco",   "emprestimo",      6_500.0,  450.0, 18,  3,  5, 3.80),
+    ])
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Bem endividado (parcelas comprometem 50%+ da renda)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _popular_bem_endividado(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET valor_mensal=6500.0, ativa=1, periodicidade='mensal' WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    conn.executemany(
+        "INSERT INTO receitas_especiais (nome, mes, valor, tipo, recorrente_anual) VALUES (?,?,?,?,1)",
+        [("13º Salário", 11, 6_500.00, "clt")],
+    )
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 1_800.00, 5),
+        ("Internet",                         149.90, 10),
+        ("Streaming (Netflix, Spotify…)",     79.90, 10),
+        ("Plano de saúde",                   420.00, 15),
+        ("Telefone / Celular",                99.90, 10),
+        ("Academia",                         109.00, 10),
+        ("Seguro veículo",                   240.00, 20),
+        ("TV por assinatura",                 89.90, 10),
+    ]
+    variaveis = [
+        ("Supermercado",            700, 1_100, 15, 1.0),
+        ("Combustível",             400,   650, 20, 1.0),
+        ("Restaurantes / Delivery", 200,   500, 20, 1.0),
+        ("Farmácia",                 80,   280, 20, 1.0),
+        ("Água",                    100,   180, 18, 1.0),
+        ("Luz / Energia elétrica",  180,   360, 12, 1.0),
+        ("Manutenção veículo",        0,   800, 20, 0.5),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank Platinum","nubank",   "master","5520",
+                             "#6D28D9","#FFFFFF",   8_000,  1_200, 1,  22, agora)
+    id_it = _inserir_cartao(conn, "Itaú Black",     "itau",     "visa",  "5521",
+                             "#000000","#EC7000",   15_000, 2_500, 15,  5, agora)
+    id_br = _inserir_cartao(conn, "Bradesco Gold",  "bradesco", "master","5522",
+                             "#CC092F","#FFFFFF",   6_000,  1_000, 10,  1, agora)
+    id_sa = _inserir_cartao(conn, "Santander Free", "santander","visa",  "5523",
+                             "#EC0000","#FFFFFF",   5_000,    900, 20, 10, agora)
+    id_lu = _inserir_cartao(conn, "Magazine Luiza", "magalu",   "master","5524",
+                             "#0066CC","#FFFFFF",   3_500,    600,  5, 26, agora)
+
+    _inserir_compras(conn, [
+        (id_nu, "MacBook Pro",        12_000.0, 24, -14),
+        (id_nu, "Câmera Sony A7",      8_000.0, 18, -10),
+        (id_it, "Viagem Disney",      18_000.0, 24, -18),
+        (id_it, "Reforma completa",   24_000.0, 36, -22),
+        (id_br, "Móveis sala",         6_000.0, 12,  -6),
+        (id_br, "Eletrodomésticos",    4_500.0, 10,  -4),
+        (id_sa, "Bicicleta elétrica",  4_200.0, 12,  -3),
+        (id_lu, "Eletrodomésticos2",   2_800.0,  8,  -2),
+    ], hoje)
+
+    # Múltiplas dívidas grandes: parcelas mensais ~3.500 (~54% da renda 6.500)
+    _inserir_dividas(conn, [
+        ("Financiamento Honda Civic",  "financiamento", 65_000.0, 1_650.0, 48, 12, 10, 1.55),
+        ("Empréstimo pessoal Itaú",    "emprestimo",    35_000.0, 1_180.0, 36,  8, 15, 1.95),
+        ("Empréstimo consignado BB",   "emprestimo",    18_000.0,   720.0, 30,  6, 20, 1.45),
+    ])
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Muito endividado (cenário crítico)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# 8 cartões com 95%+ uso, 2 faturas atrasadas, "cheque especial estourado"
+# (modelado como dívida tipo='emprestimo' com saldo = limite total).
+# Parcelas mensais ~= 85% da renda. Demo de alertas críticos.
+
+def _popular_muito_endividado(conn, planos, rng, hoje) -> int:
+    conn.execute("UPDATE fontes_receita SET valor_mensal=4800.0, ativa=1, periodicidade='mensal' WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Freela / Serviço avulso'")
+    conn.execute("DELETE FROM receitas_especiais")
+    conn.executemany(
+        "INSERT INTO receitas_especiais (nome, mes, valor, tipo, recorrente_anual) VALUES (?,?,?,?,1)",
+        [("13º Salário", 11, 4_800.00, "clt")],
+    )
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 1_200.00, 5),
+        ("Internet",                          89.90, 10),
+        ("Streaming (Netflix, Spotify…)",     49.90, 10),
+        ("Plano de saúde",                   220.00, 15),
+        ("Telefone / Celular",                79.90, 10),
+    ]
+
+    def fator_critico(offset: int) -> float:
+        if offset < -18:
+            return 0.75
+        return min(1.55, 1.0 + (offset + 18) * 0.010)
+
+    variaveis = [
+        ("Supermercado",            500,  800, 15, 1.0),
+        ("Combustível",             250,  420, 20, 1.0),
+        ("Restaurantes / Delivery",  80,  280, 20, 0.8),
+        ("Farmácia",                 80,  300, 20, 1.0),
+        ("Água",                     65,  120, 18, 1.0),
+        ("Luz / Energia elétrica",  110,  240, 12, 1.0),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng,
+                                  fator_fn=fator_critico)
+
+    agora = _agora()
+    cartoes_cfg = [
+        ("Nubank",         "nubank",    "master", "5530", "#6D28D9","#FFFFFF", 2_500,   80,  1, 22),
+        ("Itaú Visa",      "itau",      "visa",   "5531", "#EC7000","#FFFFFF", 3_000,  120, 15,  5),
+        ("Bradesco MC",    "bradesco",  "master", "5532", "#CC092F","#FFFFFF", 2_000,  100, 10,  1),
+        ("Santander",      "santander", "visa",   "5533", "#EC0000","#FFFFFF", 2_500,  150, 20, 10),
+        ("Caixa Visa",     "caixa",     "visa",   "5534", "#006BB5","#FFFFFF", 1_800,   90, 20, 10),
+        ("Magazine Luiza", "magalu",    "master", "5535", "#0066CC","#FFFFFF", 1_500,   60,  5, 26),
+        ("Americanas",     "americanas","visa",   "5536", "#CC0000","#FFFFFF", 1_500,   50, 12,  3),
+        ("Credicard",      "itau",      "master", "5537", "#0033A0","#FFFFFF", 2_000,  100, 18,  8),
+    ]
+    ids = []
+    for nome, banco, band, dig, cbg, ctx, lim, disp, dv, df in cartoes_cfg:
+        ids.append(_inserir_cartao(conn, nome, banco, band, dig, cbg, ctx, lim, disp, dv, df, agora))
+
+    _inserir_compras(conn, [
+        (ids[0], "Conserto emergência",   1_800.0, 12, -10),
+        (ids[1], "Plano dental família",  2_400.0, 18,  -8),
+        (ids[2], "Medicamentos contínuos",1_200.0, 10,  -6),
+        (ids[3], "TV + Som",              2_000.0, 18,  -5),
+        (ids[4], "Notebook 2 em 1",       1_500.0, 12,  -4),
+        (ids[5], "Geladeira",             1_300.0, 12,  -3),
+        (ids[6], "Material escolar",      1_200.0, 10,  -2),
+        (ids[7], "Pneus + bateria",       1_700.0, 12,  -1),
+    ], hoje)
+
+    # 2 faturas em atraso (vencimento passado, status='pendente')
+    pid_outros = planos.get("Outros")
+    if pid_outros:
+        for desc, valor, dias_atraso in [
+            ("Fatura cartão Nubank (atraso 35d)", 980.00, 35),
+            ("Fatura cartão Itaú (atraso 18d)",  1_350.00, 18),
+        ]:
+            from datetime import timedelta
+            venc = (hoje - timedelta(days=dias_atraso)).isoformat()
+            conn.execute(
+                "INSERT INTO contas_pagar (plano_conta_id, descricao, valor,"
+                " data_vencimento, status, recorrente, criado_em)"
+                " VALUES (?, ?, ?, ?, 'pendente', 0, ?)",
+                (pid_outros, desc, valor, venc, agora),
+            )
+            total += 1
+
+    _inserir_dividas(conn, [
+        ("Cheque especial Bradesco (estourado)", "emprestimo",  8_000.0, 700.0, 24,  2,  5, 3.95),
+        ("Empréstimo pessoal Caixa",             "emprestimo", 28_000.0, 1_100.0, 36,  8, 10, 2.45),
+        ("Financiamento moto Honda",             "financiamento",14_000.0, 580.0, 36, 10, 15, 1.80),
+        ("Renegociação dívida cartão Itaú",      "emprestimo",  5_500.0, 380.0, 18,  3, 20, 3.20),
+    ])
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Entry point público
 # ──────────────────────────────────────────────────────────────────────────────
 
 _PERFIL_FNS = {
-    "padrao":               _popular_padrao,
-    "apertado":             _popular_apertado,
-    "moderado_dividas":     _popular_moderado_dividas,
-    "moderado_recuperando": _popular_moderado_recuperando,
-    "no_verde":             _popular_no_verde,
-    "primeiro_passo":       _popular_primeiro_passo,
-    "em_ritmo":             _popular_em_ritmo,
-    "patrimonio_crescendo": _popular_patrimonio_crescendo,
+    # Cotidiano
+    "padrao":                  _popular_padrao,
+    "apertado":                _popular_apertado,
+    "no_verde":                _popular_no_verde,
+    # Trajetória de dívida
+    "moderado_dividas":        _popular_moderado_dividas,
+    "endividado_6m":           _popular_endividado_6m,
+    "endividado_1a":           _popular_endividado_1a,
+    "bem_endividado":          _popular_bem_endividado,
+    "muito_endividado":        _popular_muito_endividado,
+    "moderado_recuperando":    _popular_moderado_recuperando,
+    # Investidores
+    "primeiro_passo":          _popular_primeiro_passo,
+    "em_ritmo":                _popular_em_ritmo,
+    "patrimonio_crescendo":    _popular_patrimonio_crescendo,
+    # Profissionais/vida (serão adicionados nos próximos commits)
 }
 
 
