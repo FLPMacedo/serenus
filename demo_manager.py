@@ -201,6 +201,104 @@ def _inserir_dividas(conn, dividas: list[tuple]):
     )
 
 
+def _inserir_produtos(conn, produtos: list[tuple]) -> dict[str, int]:
+    """Insere produtos/serviços. Retorna {nome: id}.
+    Tuple: (nome, tipo, preco, descricao)
+      - tipo: 'produto' | 'servico'
+    """
+    agora = _agora()
+    ids: dict[str, int] = {}
+    for nome, tipo, preco, descricao in produtos:
+        cur = conn.execute(
+            "INSERT INTO produtos (nome, tipo, preco, descricao, ativo, criado_em)"
+            " VALUES (?, ?, ?, ?, 1, ?)",
+            (nome, tipo, preco, descricao, agora),
+        )
+        ids[nome] = cur.lastrowid
+    return ids
+
+
+def _inserir_vendas(conn, vendas: list[tuple], hoje: date) -> int:
+    """Insere vendas no histórico do perfil demo via SQL direto.
+
+    Cada tuple:
+      (descricao, total, tipo_pagamento, offset_meses, n_parcelas, [produto_ids])
+        - tipo_pagamento: 'avista' | 'aprazo'
+        - offset_meses negativo = passado (status='paga' se avista; aprazo gera
+          contas_a_receber com status='recebido' até hoje)
+        - n_parcelas: ignorado se avista
+        - produto_ids: lista opcional de ints; se vazia gera 1 item com a
+          descrição da venda como nome
+
+    Retorna número de vendas inseridas.
+    """
+    agora = _agora()
+    hoje_mes = date(hoje.year, hoje.month, 1)
+    inseridas = 0
+
+    for venda in vendas:
+        if len(venda) == 6:
+            desc, total, tipo, off, n_parc, prod_ids = venda
+        else:
+            desc, total, tipo, off, n_parc = venda
+            prod_ids = []
+
+        ano, mes = _mes_add(hoje, off)
+        dia = _dia_seguro(ano, mes, 15)
+        data_venda = _fmt(date(ano, mes, dia))
+        data_dt = date(ano, mes, dia)
+
+        if tipo == "avista":
+            status_v = "paga" if data_dt < hoje else "pendente"
+        else:
+            status_v = "pendente"  # aprazo sempre começa pendente
+
+        cur = conn.execute(
+            "INSERT INTO vendas (descricao, data_venda, valor_total, desconto,"
+            " valor_liquido, tipo_pagamento, status, observacao, criado_em)"
+            " VALUES (?, ?, ?, 0.0, ?, ?, ?, '', ?)",
+            (desc, data_venda, total, total, tipo, status_v, agora),
+        )
+        venda_id = cur.lastrowid
+
+        # Item único, com produto_id se houver
+        produto_id_item = prod_ids[0] if prod_ids else None
+        conn.execute(
+            "INSERT INTO itens_venda (venda_id, produto_id, descricao, quantidade,"
+            " preco_unit, subtotal, criado_em)"
+            " VALUES (?, ?, ?, 1.0, ?, ?, ?)",
+            (venda_id, produto_id_item, desc, total, total, agora),
+        )
+
+        if tipo == "aprazo":
+            n = max(1, n_parc)
+            val_parc = round(total / n, 2)
+            for i in range(1, n + 1):
+                ano_p, mes_p = _mes_add(date(ano, mes, dia), i)  # parcela mensal
+                d_venc = _fmt(date(ano_p, mes_p, _dia_seguro(ano_p, mes_p, dia)))
+                venc_dt = date(ano_p, mes_p, _dia_seguro(ano_p, mes_p, dia))
+                v = (val_parc if i < n
+                     else round(total - val_parc * (n - 1), 2))
+
+                # Parcelas vencidas no passado viram 'recebido'
+                if venc_dt < hoje_mes:
+                    status_p = "recebido"
+                    d_receb = d_venc
+                else:
+                    status_p = "pendente"
+                    d_receb = None
+                conn.execute(
+                    "INSERT INTO contas_a_receber (venda_id, descricao, valor,"
+                    " data_vencimento, data_recebimento, status, numero_parcela,"
+                    " total_parcelas, observacao, criado_em)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?)",
+                    (venda_id, f"{desc} ({i}/{n})", v, d_venc, d_receb,
+                     status_p, i, n, agora),
+                )
+        inseridas += 1
+    return inseridas
+
+
 def _inserir_metas(conn, metas: list[tuple]) -> None:
     """Insere metas financeiras.
     Tuple: (nome, valor_alvo, valor_atual, prazo_iso|None, descricao)
@@ -1416,6 +1514,87 @@ def _popular_muito_endividado(conn, planos, rng, hoje) -> int:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Perfil — Profissional informal (múltiplas rendas)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Sem CLT. Vive de freela (R$ 2.500 médio), aluguel de um imóvel (R$ 1.800),
+# e vendas avulsas (designer? marketplaces?). 1 cartão pessoal. Despesas
+# modestas. Conta poupança como reserva. Sem dívidas grandes.
+#
+# Demonstra: receita variável, vendas no extrato, categorização de fontes.
+
+def _popular_profissional_informal(conn, planos, rng, hoje) -> int:
+    # Receitas: desliga CLT, ativa freela e aluguel
+    conn.execute("UPDATE fontes_receita SET ativa=0 WHERE nome='Salário CLT'")
+    conn.execute("UPDATE fontes_receita SET valor_mensal=2500.0, ativa=1, periodicidade='mensal' WHERE nome='Freela / Serviço avulso'")
+    # 'Aluguel recebido' já está no padrão, mas pode estar inativa
+    conn.execute("UPDATE fontes_receita SET valor_mensal=1800.0, ativa=1, periodicidade='mensal' WHERE nome='Aluguel recebido'")
+    conn.execute("DELETE FROM receitas_especiais")
+    # Sem 13º (não é CLT)
+
+    fixas = [
+        ("Aluguel / Financiamento imóvel", 1_100.00, 5),
+        ("Internet",                          99.90, 10),
+        ("Streaming (Netflix, Spotify…)",     39.90, 10),
+        ("Plano de saúde",                   210.00, 15),
+        ("Telefone / Celular",                89.90, 10),
+    ]
+    variaveis = [
+        ("Supermercado",            400,  700, 15, 1.0),
+        ("Combustível",             150,  280, 20, 1.0),
+        ("Restaurantes / Delivery",  80,  220, 20, 1.0),
+        ("Farmácia",                 30,  120, 20, 1.0),
+        ("Água",                     55,  100, 18, 1.0),
+        ("Luz / Energia elétrica",   80,  180, 12, 1.0),
+        ("Cursos online",             0,  300, 20, 0.3),
+    ]
+    total = _inserir_lancamentos(conn, planos, fixas, variaveis, hoje, rng)
+
+    agora = _agora()
+    id_nu = _inserir_cartao(conn, "Nubank", "nubank", "master", "5540",
+                             "#6D28D9", "#FFFFFF", 4_500, 2_800, 1, 22, agora)
+    _inserir_compras(conn, [
+        (id_nu, "Equipamento de trabalho", 1_800.0, 10, -6),
+        (id_nu, "Curso técnico",             900.0,  6, -3),
+    ], hoje)
+
+    # Vendas avulsas (designs, consultorias, produtos artesanais — descrição
+    # genérica). Mistura à vista e a prazo (3 parcelas).
+    _inserir_vendas(conn, [
+        # (descricao, total, tipo, offset_meses, n_parcelas)
+        ("Design de logotipo cliente A",       650.00, "avista", -6, 1),
+        ("Consultoria de marketing",         1_200.00, "aprazo", -5, 3),
+        ("Pacote 5 posts redes sociais",       450.00, "avista", -4, 1),
+        ("Design de site institucional",     2_400.00, "aprazo", -4, 3),
+        ("Identidade visual completa",       1_800.00, "avista", -3, 1),
+        ("Edição de vídeos (lote)",            750.00, "avista", -3, 1),
+        ("Consultoria empresarial",          1_500.00, "aprazo", -2, 2),
+        ("Apresentação corporativa",           550.00, "avista", -2, 1),
+        ("Design de cardápio + impressão",     680.00, "avista", -1, 1),
+        ("Pacote anual (manutenção site)",   3_600.00, "aprazo", -1, 6),
+        ("Design de embalagem",                900.00, "avista",  0, 1),
+        ("Consultoria nova marca",           1_200.00, "aprazo",  0, 3),
+    ], hoje)
+
+    # Dívida modesta — financiamento de equipamento
+    _inserir_dividas(conn, [
+        ("Financ. equipamento (MacBook)", "financiamento", 4_800.0, 480.0, 12, 4, 10, 1.20),
+    ])
+
+    # Metas simples
+    _inserir_metas(conn, [
+        ("Reserva de emergência (6 meses)",
+         18_000.0, 7_200.0, _data_offset_str(hoje, 18),
+         "Cobrir 6 meses de despesas com renda variável"),
+        ("Trocar equipamento de trabalho",
+          8_000.0, 1_500.0, _data_offset_str(hoje, 10),
+         "Notebook + monitor + cadeira"),
+    ])
+
+    return total
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Entry point público
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1435,7 +1614,8 @@ _PERFIL_FNS = {
     "primeiro_passo":          _popular_primeiro_passo,
     "em_ritmo":                _popular_em_ritmo,
     "patrimonio_crescendo":    _popular_patrimonio_crescendo,
-    # Profissionais/vida (serão adicionados nos próximos commits)
+    # Profissionais/vida
+    "profissional_informal":   _popular_profissional_informal,
 }
 
 
