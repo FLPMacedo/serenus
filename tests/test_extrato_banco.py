@@ -163,6 +163,101 @@ class TestResumo:
         assert r["sem_categoria"] == 3
 
 
+class TestReaplicarRegras:
+    def test_reaplicar_em_lancamentos_existentes(self, banco, conta):
+        """Cenário típico: user importa primeiro, cadastra regra depois."""
+        from views.fluxo_caixa.extrato_banco_model import (
+            importar, listar_lancamentos_mes, reaplicar_regras,
+        )
+        from views.fluxo_caixa.regras_categoria_model import salvar_regra
+        from database import conectar
+        with conectar() as conn:
+            pid = conn.execute(
+                "SELECT id FROM plano_contas WHERE nome='Restaurantes / Delivery'"
+            ).fetchone()["id"]
+
+        # 1. Importa sem regra (todos ficam sem categoria)
+        importar(conta, [
+            _item("2026-05-10", "LANCHONETE X", -10.0, "a"),
+            _item("2026-05-11", "POSTO Y",      -50.0, "b"),
+        ])
+        lst = listar_lancamentos_mes(5, 2026, conta)
+        assert all(l.plano_conta_id is None for l in lst)
+
+        # 2. Cadastra regra
+        salvar_regra({"padrao": "LANCHONETE", "tipo": "saida",
+                      "plano_conta_id": pid})
+
+        # 3. Re-aplica
+        n = reaplicar_regras(conta)
+        assert n == 1, f"esperava 1 categorizado, veio {n}"
+
+        # 4. Verifica DB
+        lst = listar_lancamentos_mes(5, 2026, conta)
+        cat = next(l for l in lst if "LANCHONETE" in l.descricao)
+        nao_cat = next(l for l in lst if "POSTO" in l.descricao)
+        assert cat.plano_conta_id == pid
+        assert nao_cat.plano_conta_id is None
+
+    def test_apenas_sem_categoria_preserva_manuais(self, banco, conta):
+        """User categorizou X manualmente; regra que casaria com X NÃO deve
+        sobrescrever quando apenas_sem_categoria=True (padrão)."""
+        from views.fluxo_caixa.extrato_banco_model import (
+            importar, listar_lancamentos_mes, reaplicar_regras, categorizar,
+        )
+        from views.fluxo_caixa.regras_categoria_model import salvar_regra
+        from database import conectar
+        with conectar() as conn:
+            p_super = conn.execute(
+                "SELECT id FROM plano_contas WHERE nome='Supermercado'"
+            ).fetchone()["id"]
+            p_rest = conn.execute(
+                "SELECT id FROM plano_contas WHERE nome='Restaurantes / Delivery'"
+            ).fetchone()["id"]
+
+        importar(conta, [_item("2026-05-10", "LANCHONETE X", -10.0, "a")])
+        lid = listar_lancamentos_mes(5, 2026, conta)[0].id
+        # User categoriza manualmente
+        categorizar(lid, plano_conta_id=p_super)
+
+        # Cadastra regra que casaria
+        salvar_regra({"padrao": "LANCHONETE", "tipo": "saida",
+                      "plano_conta_id": p_rest})
+
+        # Re-aplica com apenas_sem_categoria=True (padrão) — NÃO sobrescreve
+        n = reaplicar_regras(conta)
+        assert n == 0
+        assert listar_lancamentos_mes(5, 2026, conta)[0].plano_conta_id == p_super
+
+        # Com apenas_sem_categoria=False — sobrescreve
+        n = reaplicar_regras(conta, apenas_sem_categoria=False)
+        assert n == 1
+        assert listar_lancamentos_mes(5, 2026, conta)[0].plano_conta_id == p_rest
+
+    def test_filtra_por_conta(self, banco, conta, conta_b):
+        from views.fluxo_caixa.extrato_banco_model import (
+            importar, listar_lancamentos_mes, reaplicar_regras,
+        )
+        from views.fluxo_caixa.regras_categoria_model import salvar_regra
+        from database import conectar
+        with conectar() as conn:
+            pid = conn.execute(
+                "SELECT id FROM plano_contas WHERE nome='Supermercado'"
+            ).fetchone()["id"]
+
+        importar(conta,   [_item("2026-05-10", "MERCADO X", -10.0, "a")])
+        importar(conta_b, [_item("2026-05-11", "MERCADO Y", -20.0, "b")])
+        salvar_regra({"padrao": "MERCADO", "tipo": "saida",
+                      "plano_conta_id": pid})
+
+        # Reaplica só na conta A
+        n = reaplicar_regras(conta)
+        assert n == 1
+        # Conta A categorizada, conta B não
+        assert listar_lancamentos_mes(5, 2026, conta)[0].plano_conta_id == pid
+        assert listar_lancamentos_mes(5, 2026, conta_b)[0].plano_conta_id is None
+
+
 class TestExcluir:
     def test_excluir_individual(self, conta):
         from views.fluxo_caixa.extrato_banco_model import (

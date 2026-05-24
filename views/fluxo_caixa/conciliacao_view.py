@@ -26,7 +26,7 @@ from views.fluxo_caixa.conta_banco_model import (
 )
 from views.fluxo_caixa.extrato_banco_model import (
     listar_lancamentos_mes, marcar_conciliado, resumo_conta,
-    categorizar, obter_lancamento, excluir_lancamento,
+    categorizar, obter_lancamento, excluir_lancamento, reaplicar_regras,
 )
 
 
@@ -111,6 +111,13 @@ class ConciliacaoView(ctk.CTkFrame):
             fg_color="transparent", border_width=1,
             border_color=cores["borda"], text_color=cores["texto"],
             command=self._gerenciar_regras,
+        ).pack(side="left", padx=2)
+
+        ctk.CTkButton(
+            botoes, text="↻ Re-aplicar", width=110, height=30,
+            fg_color="transparent", border_width=1,
+            border_color=cores["borda"], text_color=cores["texto"],
+            command=self._reaplicar_regras,
         ).pack(side="left", padx=2)
 
     # ------------------------------------------------------------------
@@ -431,6 +438,28 @@ class ConciliacaoView(ctk.CTkFrame):
     def _gerenciar_regras(self):
         from views.fluxo_caixa.form_regras_categoria import FormRegrasCategoriaModal
         FormRegrasCategoriaModal(self, on_fechado=lambda: self._recarregar())
+
+    def _reaplicar_regras(self):
+        """Aplica regras ativas aos lançamentos JÁ importados.
+
+        Pergunta ao user se quer sobrescrever categorias manuais ou só
+        preencher os sem categoria. Por padrão preserva manuais.
+        """
+        if not self._conta_id:
+            mb.showinfo("Sem conta", "Selecione uma conta primeiro.")
+            return
+
+        sobrescrever = mb.askyesno(
+            "Re-aplicar regras",
+            "Re-aplicar regras de categorização nos lançamentos já importados?\n\n"
+            "SIM = sobrescreve categorias manuais (CUIDADO).\n"
+            "NÃO = preserva manuais, só preenche os sem categoria (recomendado).",
+        )
+        n = reaplicar_regras(
+            self._conta_id, apenas_sem_categoria=not sobrescrever,
+        )
+        mb.showinfo("Concluído", f"{n} lançamento(s) categorizado(s).")
+        self._recarregar()
 
     def _toggle_conciliado(self, lanc_id: int, conciliado: bool):
         marcar_conciliado(lanc_id, conciliado)

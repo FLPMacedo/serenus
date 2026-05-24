@@ -261,6 +261,70 @@ def excluir_lancamentos_conta(conta_banco_id: int) -> int:
         return cur.rowcount
 
 
+def reaplicar_regras(
+    conta_banco_id: int | None = None,
+    apenas_sem_categoria: bool = True,
+) -> int:
+    """Re-aplica as regras de categorização ativas aos lançamentos já importados.
+
+    Quando o usuário cadastra uma regra NOVA depois de importar extratos,
+    os lançamentos antigos ficam sem categoria. Essa função roda
+    casar_regras() em todos eles e persiste as categorias encontradas.
+
+    - `conta_banco_id`: limita a uma conta específica (None = todas).
+    - `apenas_sem_categoria`: se True, ignora lançamentos que JÁ têm
+      categoria (padrão, pra não sobrescrever escolhas manuais do user).
+      Se False, re-aplica em TODOS — útil quando o user atualiza uma
+      regra existente e quer que reflita no histórico.
+
+    Retorna a quantidade de lançamentos que ganharam categoria nova.
+    """
+    from views.fluxo_caixa.regras_categoria_model import casar_regras
+
+    where = []
+    params: list = []
+    if conta_banco_id is not None:
+        where.append("conta_banco_id = ?")
+        params.append(conta_banco_id)
+    if apenas_sem_categoria:
+        where.append("plano_conta_id IS NULL AND fonte_receita_id IS NULL")
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+    with conectar() as conn:
+        rows = conn.execute(
+            f"SELECT id, data, descricao, valor FROM lancamentos_banco {where_sql}",
+            tuple(params),
+        ).fetchall()
+
+        # Converte pra dicts no formato esperado por casar_regras
+        itens = [
+            {"id": r["id"], "data": r["data"], "descricao": r["descricao"],
+             "valor": r["valor"], "identificador_unico": ""}
+            for r in rows
+        ]
+        resultado = casar_regras(itens)
+
+        n_atualizados = 0
+        for item in resultado:
+            if item.get("plano_conta_id"):
+                conn.execute(
+                    "UPDATE lancamentos_banco SET plano_conta_id = ? WHERE id = ?",
+                    (item["plano_conta_id"], item["id"]),
+                )
+                n_atualizados += 1
+            elif item.get("fonte_receita_id"):
+                conn.execute(
+                    "UPDATE lancamentos_banco SET fonte_receita_id = ? WHERE id = ?",
+                    (item["fonte_receita_id"], item["id"]),
+                )
+                n_atualizados += 1
+        conn.commit()
+
+    log.info("reaplicar_regras: %d lançamentos atualizados (conta=%s)",
+             n_atualizados, conta_banco_id)
+    return n_atualizados
+
+
 def resumo_conta(conta_banco_id: int) -> dict:
     """Estatísticas da conta: total entradas/saídas, % conciliado etc."""
     with conectar() as conn:
