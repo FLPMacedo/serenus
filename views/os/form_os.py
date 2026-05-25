@@ -10,7 +10,7 @@ Layout em seções dentro de um CTkScrollableFrame:
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 import customtkinter as ctk
 
@@ -29,6 +29,7 @@ from views.os.os_model import (
     salvar_os,
 )
 from views.vendas.venda_model import listar_produtos
+from views.widgets.date_picker import DatePickerEntry, TimePickerCombo
 
 
 _STATUS_OPCOES: list[tuple[str, str]] = [
@@ -213,33 +214,37 @@ class FormOSModal(ctk.CTkToplevel):
         row_data = ctk.CTkFrame(frame, fg_color="transparent")
         row_data.pack(fill="x", pady=(4, 8))
 
+        # Data de solicitação — calendário pré-preenchido com hoje
         c_ds = ctk.CTkFrame(row_data, fg_color="transparent")
         c_ds.pack(side="left", padx=(0, 6))
         self._label(c_ds, "Data de solicitação *")
-        self._e_data_solic = ctk.CTkEntry(c_ds, width=140,
-                                           placeholder_text="DD/MM/AAAA")
-        self._e_data_solic.insert(0, date.today().strftime("%d/%m/%Y"))
+        self._e_data_solic = DatePickerEntry(c_ds, width=140,
+                                             default=date.today())
         self._e_data_solic.pack(pady=(2, 0))
 
+        # Hora de solicitação — combo HH:MM pré-preenchido com a hora atual
+        # (editável: usuário pode digitar minuto exato se quiser)
         c_hs = ctk.CTkFrame(row_data, fg_color="transparent")
         c_hs.pack(side="left", padx=6)
         self._label(c_hs, "Hora")
-        self._e_hora_solic = ctk.CTkEntry(c_hs, width=80,
-                                           placeholder_text="HH:MM")
+        self._e_hora_solic = TimePickerCombo(
+            c_hs, width=90,
+            default=datetime.now().strftime("%H:%M"),
+        )
         self._e_hora_solic.pack(pady=(2, 0))
 
+        # Data de execução — calendário (vazio por padrão)
         c_de = ctk.CTkFrame(row_data, fg_color="transparent")
         c_de.pack(side="left", padx=6)
         self._label(c_de, "Data de execução")
-        self._e_data_exec = ctk.CTkEntry(c_de, width=140,
-                                          placeholder_text="DD/MM/AAAA")
+        self._e_data_exec = DatePickerEntry(c_de, width=140)
         self._e_data_exec.pack(pady=(2, 0))
 
+        # Hora de execução — combo HH:MM (vazio por padrão)
         c_he = ctk.CTkFrame(row_data, fg_color="transparent")
         c_he.pack(side="left", padx=(6, 0))
         self._label(c_he, "Hora")
-        self._e_hora_exec = ctk.CTkEntry(c_he, width=80,
-                                          placeholder_text="HH:MM")
+        self._e_hora_exec = TimePickerCombo(c_he, width=90)
         self._e_hora_exec.pack(pady=(2, 0))
 
         # --- Descrição do serviço + Responsável ---
@@ -522,12 +527,14 @@ class FormOSModal(ctk.CTkToplevel):
         self._e_solic_setor.insert(0, o.solicitante_setor)
         self._e_solic_ramal.insert(0, o.solicitante_ramal)
 
-        self._e_data_solic.delete(0, "end")
-        self._e_data_solic.insert(0, formatar_data_exibicao(o.data_solicitacao))
-        self._e_hora_solic.insert(0, o.hora_solicitacao)
+        # DatePickerEntry/TimePickerCombo expõem .set() coerente com edição
+        self._e_data_solic.set(formatar_data_exibicao(o.data_solicitacao))
+        if o.hora_solicitacao:
+            self._e_hora_solic.set(o.hora_solicitacao)
         if o.data_execucao:
-            self._e_data_exec.insert(0, formatar_data_exibicao(o.data_execucao))
-        self._e_hora_exec.insert(0, o.hora_execucao)
+            self._e_data_exec.set(formatar_data_exibicao(o.data_execucao))
+        if o.hora_execucao:
+            self._e_hora_exec.set(o.hora_execucao)
 
         self._t_descricao.insert("1.0", o.descricao_servico)
         self._e_responsavel.insert(0, o.responsavel)
