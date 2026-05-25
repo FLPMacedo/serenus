@@ -4,9 +4,11 @@
 > Cada capítulo mostra: a tela do módulo → o formulário de cadastro → o resultado.
 > Versão 2.3.0 · Português BR
 >
-> **Novos capítulos v2.3.0**: 18 (importar fatura PDF), 19 (importar
-> extrato bancário CSV/OFX/PDF), 20 (lançar manual + conciliar com
-> conta_pagar). Veja também `MANUAL_DEMOS.md` para o guia dos 20 perfis demo.
+> **Novos capítulos v2.3.0**: 18 (importar fatura PDF — 7 emissores),
+> 19 (importar extrato bancário CSV/OFX/PDF), 20 (lançar manual +
+> conciliar com conta_pagar), **21 (📅 Agenda — calendário + lista
+> cronológica)**, **22 (Calendário e combo de hora no formulário de OS)**.
+> Veja também `MANUAL_DEMOS.md` para o guia dos 20 perfis demo.
 
 ---
 
@@ -43,6 +45,11 @@ Os prints foram capturados com o app rodando — você vai ver exatamente as mes
 15. [Definindo uma meta financeira](#15-definindo-uma-meta-financeira)
 16. [Acompanhando o resultado — telas de consulta](#16-acompanhando-o-resultado--telas-de-consulta)
 17. [Abrindo uma Ordem de Serviço interna](#17-abrindo-uma-ordem-de-serviço-interna)
+18. [Importando fatura de cartão em PDF *(v2.3.0)*](#18-importando-fatura-de-cartão-em-pdf-v230)
+19. [Importando extrato bancário *(v2.3.0)*](#19-importando-extrato-bancário-v230)
+20. [Lançando entrada/saída avulsa no extrato *(v2.3.0)*](#20-lançando-entradasaída-avulsa-no-extrato-v230)
+21. [📅 Agenda — calendário mensal + lista cronológica *(v2.3.0)*](#21--agenda--calendário-mensal--lista-cronológica-v230)
+22. [Calendário e combo de hora no formulário de OS *(v2.3.0)*](#22-calendário-e-combo-de-hora-no-formulário-de-os-v230)
 
 ---
 
@@ -825,6 +832,228 @@ recorrência.
 
 ---
 
+## 21. 📅 Agenda — calendário mensal + lista cronológica *(v2.3.0)*
+
+🎯 **Objetivo:** Ver em um único lugar tudo o que está chegando —
+vencimentos de contas, receitas previstas, ordens de serviço agendadas
+e seus próprios lembretes (CNH, reunião, exame, etc).
+
+A Agenda **não duplica dado nenhum** — ela só agrega o que já está
+cadastrado nos outros módulos. A única coisa cadastrada DIRETO nela são
+os "compromissos avulsos" (lembretes que não cabem em nenhum outro
+módulo).
+
+### 21.1 Onde fica
+
+Sidebar → **📅 Agenda** (logo abaixo de **🏠 Início**).
+
+Você cai numa tela com **2 abas**:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 📅  Agenda                              [ + Compromisso ]       │
+├─────────────────────────────────────────────────────────────────┤
+│ 💡 Veja em um só lugar tudo o que está chegando…                │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────┐ ┌──────────┐                                          │
+│  │ Mês  │ │ Próximos │                                          │
+│  └──────┘ └──────────┘                                          │
+│ ...conteúdo da aba escolhida...                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 21.2 Aba **Mês** — grid de calendário
+
+Visualização tradicional de calendário (7 colunas Seg–Dom × 4–6 linhas).
+Header tem:
+
+- **◀** / **▶** — navega mês a mês
+- **Junho 2026** — título do mês atual (clicável? não, só leitura)
+- Botão **Hoje** — volta pro mês atual
+- **Legenda colorida** à direita: 💸 Despesa (vermelho) · 💰 Receita
+  (verde) · 🔧 OS (azul) · 📌 Compromisso (roxo)
+
+Cada **célula do dia** mostra:
+
+- Número do dia no canto superior direito. Se for **hoje**, fica em uma
+  bolinha azul.
+- Até **3 pílulas coloridas** com os compromissos do dia (cor da pílula =
+  tipo do compromisso). Pílulas longas são truncadas com "…".
+- Se houver mais de 3, aparece linha **"+N mais"** em itálico.
+
+**Interações:**
+
+- **Click no número do dia** → abre o modal de novo compromisso já com a
+  data pré-preenchida.
+- **Click numa pílula de compromisso avulso** → abre o modal de edição.
+  Pílulas de despesa/receita/OS não abrem nada aqui (use o módulo
+  correspondente).
+
+### 21.3 Aba **Próximos** — lista cronológica
+
+Lista vertical agrupada por dia. Header tem um combo **Janela**:
+
+- Próximos 7 dias
+- Próximos 15 dias
+- **Próximos 30 dias** (padrão)
+- Próximos 60 dias
+
+Cada grupo tem um cabeçalho como **"Hoje"**, **"Amanhã"** ou
+**"Sex 30/05"** seguido das linhas dos compromissos:
+
+```
+Hoje
+ ▮ 09:00 ── 📌 Compromisso  Reunião com fornecedor
+            Discutir contrato 2027
+ ▮       ── 💸 Despesa  Aluguel
+            casa nova                                     -R$ 1.500,00
+
+Amanhã
+ ▮       ── 💰 Receita  Salário CLT
+            Fonte (clt) — dia previsto                    +R$ 6.800,00
+```
+
+A barra colorida lateral indica o tipo. Compromissos concluídos
+aparecem **riscados** (overstrike).
+
+### 21.4 Cadastrando um compromisso avulso
+
+Use pra coisas que **não cabem** em outros módulos: lembrete pessoal,
+reunião, exame médico, vencimento de documento, aniversário, etc.
+
+**Passo a passo:**
+
+1. Sidebar → **📅 Agenda**
+2. Clique em **+ Compromisso** no canto superior direito
+3. No modal:
+   - **Título** *obrigatório* — ex: "Renovar CNH"
+   - **Data** *obrigatória* — botão 📅 abre o mini-calendário
+   - **Hora** opcional — combo HH:MM (passos de 30 min, editável pra
+     minuto exato)
+   - **Categoria** — Pessoal · Trabalho · Saúde · Outro
+   - **Descrição** opcional
+   - **Marcar como concluído** (só em modo edição faz sentido)
+4. Clique em **Salvar**
+
+**Resultado:** o compromisso aparece imediatamente:
+- Na aba **Mês**, como pílula roxa no dia escolhido
+- Na aba **Próximos**, agrupado sob o dia correspondente
+
+### 21.5 Editando ou marcando como concluído
+
+- Na aba **Mês**: clique na pílula roxa do compromisso
+- Na aba **Próximos**: clique em qualquer lugar da linha
+
+Modal de edição abre com botão **Excluir** (vermelho) à esquerda. Marque
+o checkbox **"Marcar como concluído"** e salve — o compromisso fica
+riscado no feed.
+
+### 21.6 Como cada tipo de item entra na Agenda
+
+| Tipo | De onde vem | Quando aparece |
+|---|---|---|
+| 💸 **Despesa** | `contas_pagar` | No dia do vencimento |
+| 💰 **Receita (fonte)** | `fontes_receita` ativa | No `dia_pagamento` (ou dia 5 se NULL — "dia previsto") |
+| 💰 **Receita especial** | `receitas_especiais` | No dia 1 do mês configurado |
+| 🔧 **OS** | `ordens_servico` com `data_execucao` | No dia agendado |
+| 📌 **Compromisso** | `agenda_eventos` | No dia cadastrado |
+
+⚠️ **Fonte sem dia de pagamento:** se você não configurou o
+`dia_pagamento` da fonte, a agenda assume **dia 5** (padrão brasileiro
+pra salário) e marca o subtítulo como *"— dia previsto"*. Edite a fonte
+em **💰 Minhas Receitas** se quiser fixar o dia real.
+
+💡 **Privacidade:** tudo agregado é lido localmente. Nenhum compromisso
+sai da sua máquina.
+
+---
+
+## 22. Calendário e combo de hora no formulário de OS *(v2.3.0)*
+
+🎯 **Objetivo:** Cadastrar/editar Ordem de Serviço com seletores
+visuais de data e hora (sem digitar `DD/MM/AAAA` ou `HH:MM` à mão).
+
+### 22.1 O que mudou no form de OS
+
+Os 4 campos da seção **Datas e horários** ganharam UX nova:
+
+| Campo | Antes | Agora |
+|---|---|---|
+| **Data de solicitação** | Entry com `DD/MM/AAAA` (pré-com hoje) | Mini-calendário 📅 ao clicar no botão |
+| **Hora de solicitação** | Entry vazio `HH:MM` | Combo HH:MM **pré-preenchido com a hora atual** |
+| **Data de execução** | Entry vazio `DD/MM/AAAA` | Mini-calendário 📅 |
+| **Hora de execução** | Entry vazio `HH:MM` | Combo HH:MM (passos de 30 min) |
+
+### 22.2 Como usar o mini-calendário
+
+Em qualquer campo de data, clique no botão **📅** ao lado. Abre o popup:
+
+```
+┌────────────────────────────────────┐
+│  ◀     Junho 2026     ▶            │
+├────────────────────────────────────┤
+│  S  T  Q  Q  S  S  D               │
+│  1  2  3  4  5  6  7               │
+│  8  9 10 11 12 13 14               │
+│ 15 16 17 18 19 20 21               │
+│ 22 23 24 [25] 26 27 28             │  ← hoje em azul
+│ 29 30                              │
+├────────────────────────────────────┤
+│ [ Hoje ]  [ Limpar ]    [ Cancelar ]│
+└────────────────────────────────────┘
+```
+
+- **◀ / ▶** — navega mês a mês
+- **Click num dia** — seleciona, preenche o campo, fecha o popup
+- **Hoje** — atalho pra data de hoje
+- **Limpar** — esvazia o campo (data de execução vira vazia, por exemplo)
+- **Cancelar** ou **Esc** — fecha sem mudar nada
+
+### 22.3 Como usar o combo de hora
+
+Combo dropdown com horários a cada **30 minutos** (00:00, 00:30, 01:00,
+…, 23:30 = 48 opções). É **editável**: se precisar de "09:17", basta
+digitar dentro do combo.
+
+A **Hora de solicitação** já vem preenchida com a hora atual da máquina
+no momento de abrir o form — útil pra OS que você está abrindo em tempo
+real. Editável caso queira mudar.
+
+### 22.4 Passo a passo — abrindo uma OS rapidamente
+
+1. Sidebar → **🔧 Ordens de Serviço** → **+ Nova OS**
+2. Preencha **Solicitante** (nome/setor/ramal)
+3. Em **Datas e horários:**
+   - **Data de solicitação** já vem com hoje ✓
+   - **Hora de solicitação** já vem com a hora agora ✓
+   - **Data de execução**: clique no 📅 e escolha o dia que vai executar
+     (pula 3 dias = pega quinta-feira no calendário)
+   - **Hora de execução**: dropdown → escolha "14:00" (ou digite "14:30")
+4. Preencha **Descrição do serviço**, materiais, mão de obra
+5. **Registrar OS**
+
+### 22.5 Editando uma OS existente
+
+Click em **✏ Editar** num card de OS. Os campos vêm preenchidos com os
+valores salvos:
+
+- Datas vão pro mini-calendário (mostra o mês da data salva ao abrir)
+- Horas vão pro combo (mostra o valor exato salvo, mesmo se for
+  fora-da-grade tipo "09:17")
+
+Toda alteração de data/hora aparece no **📋 Histórico** da OS depois
+de salvar.
+
+💡 **Por que combo e não entry?** Pesquisa de UX mostra que pra horários
+"redondos" (07:00, 14:30, etc) o usuário escolhe 5x mais rápido em
+dropdown do que digitando. Pra minuto exato, o combo aceita digitação
+livre — você não perde flexibilidade.
+
+⚠️ **Validação:** se você digitar um horário inválido tipo "25:99", o
+form bloqueia o salvamento e marca o campo em vermelho.
+
+---
+
 ## Apêndice — Atalhos e Dicas Rápidas
 
 ### Máscaras automáticas
@@ -850,6 +1079,9 @@ recorrência.
 | Importação zerou valores | Coluna `valor` com formato estranho | Veja [Capítulo 8](#8-importando-fatura-csvxlsx) |
 | Erro de data inválida | Data 31/02, 31/04 etc. | Use data real |
 | Visão Financeira vermelha | Falta receita ou sobra fixa | Confira em Receitas |
+| Receita não aparece na Agenda | Fonte ativa sem `dia_pagamento` | Edite a fonte e informe o dia; ou aceita o "dia previsto" (= dia 5) |
+| Calendário invisível no tema claro | Atualização desatualizada | Reinstale o `SerenusSetup.exe` mais recente |
+| Botões "Excluir"/"Cancelar" cortados em diálogos | DPI alto + versão antiga | Reinstale o `SerenusSetup.exe` mais recente |
 
 ### Onde encontrar mais
 
@@ -860,4 +1092,6 @@ recorrência.
 
 ---
 
-*Serenus Playbook v2.1.0 — Documentação visual completa*
+*Serenus Playbook v2.3.0 — Documentação visual completa*
+*Capítulos 18–22 cobrindo: PDF fatura · Extrato bancário · Lançamentos
+manuais · Agenda · Calendário/hora na OS.*
