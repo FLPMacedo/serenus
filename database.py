@@ -421,6 +421,23 @@ def inicializar_banco():
                 (tipo = 'saida'   AND plano_conta_id IS NOT NULL AND fonte_receita_id IS NULL)
             )
         );
+
+        -- Compromissos avulsos da Agenda (lembretes manuais que não estão
+        -- vinculados a contas a pagar, receitas, OS etc. — ex: "renovar CNH",
+        -- "reunião com fornecedor"). Itens das outras tabelas (contas_pagar,
+        -- fontes_receita, receitas_especiais, ordens_servico) são agregados
+        -- via views/agenda/agenda_model.py.
+        CREATE TABLE IF NOT EXISTS agenda_eventos (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            titulo      TEXT    NOT NULL,
+            descricao   TEXT    DEFAULT '',
+            data        TEXT    NOT NULL,                -- YYYY-MM-DD
+            hora        TEXT    DEFAULT '',              -- HH:MM ou ''
+            categoria   TEXT    DEFAULT 'pessoal'
+                        CHECK(categoria IN ('pessoal','trabalho','saude','outro')),
+            concluido   INTEGER DEFAULT 0,
+            criado_em   TEXT    NOT NULL
+        );
     """)
 
     conn.commit()

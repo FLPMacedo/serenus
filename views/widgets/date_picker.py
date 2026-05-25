@@ -81,6 +81,13 @@ class DatePickerEntry(ctk.CTkFrame):
     # ------------------------------------------------------------------
 
     def _abrir(self):
+        # Tema do app (claro/escuro) — usado pra cores explícitas em texto
+        # dos botões/labels do popup. Sem isso, o "transparent" deixava os
+        # números dos dias brancos sobre fundo branco (invisíveis no claro).
+        from database import obter_configuracao
+        from config import get_tema
+        cores = get_tema(obter_configuracao("tema", "claro"))
+
         # Data inicial: o que está digitado, senão hoje
         try:
             inicial = datetime.strptime(self.get(), "%d/%m/%Y").date()
@@ -89,7 +96,7 @@ class DatePickerEntry(ctk.CTkFrame):
 
         pop = ctk.CTkToplevel(self)
         pop.title("Selecionar data")
-        pop.geometry("280x300")
+        pop.geometry("300x340")
         pop.resizable(False, False)
         pop.transient(self.winfo_toplevel())
         pop.grab_set()
@@ -112,6 +119,7 @@ class DatePickerEntry(ctk.CTkFrame):
         btn_prev.pack(side="left")
 
         lbl_titulo = ctk.CTkLabel(hdr, text="",
+                                  text_color=cores["texto"],
                                   font=ctk.CTkFont(size=13, weight="bold"))
         lbl_titulo.pack(side="left", expand=True)
 
@@ -130,9 +138,13 @@ class DatePickerEntry(ctk.CTkFrame):
                       command=lambda: _escolher(date.today())).pack(side="left")
         ctk.CTkButton(rod, text="Limpar", width=70, height=26,
                       fg_color="transparent", border_width=1,
+                      text_color=cores["texto"],
+                      border_color=cores["borda"],
                       command=lambda: (_escolher(None))).pack(side="left", padx=4)
         ctk.CTkButton(rod, text="Cancelar", width=80, height=26,
                       fg_color="transparent", border_width=1,
+                      text_color=cores["texto"],
+                      border_color=cores["borda"],
                       command=pop.destroy).pack(side="right")
 
         def _escolher(d: Optional[date]):
@@ -150,6 +162,7 @@ class DatePickerEntry(ctk.CTkFrame):
             # Cabeçalho dos dias da semana
             for col, d in enumerate(_DIAS_SEM_PT):
                 ctk.CTkLabel(grid, text=d, width=32,
+                             text_color=cores["texto_mudo"],
                              font=ctk.CTkFont(size=11, weight="bold")
                              ).grid(row=0, column=col, padx=1, pady=1)
 
@@ -166,11 +179,16 @@ class DatePickerEntry(ctk.CTkFrame):
                     except ValueError:
                         continue
                     eh_hoje = (d == hoje)
+                    # BUGFIX: text_color=None deixava o número branco sobre
+                    # fundo branco (invisível no tema claro). Agora puxa do
+                    # tema explicitamente.
                     btn = ctk.CTkButton(
                         grid, text=str(dia), width=32, height=26,
                         fg_color=("#2563EB" if eh_hoje else "transparent"),
-                        text_color=("#FFFFFF" if eh_hoje else None),
+                        text_color=("#FFFFFF" if eh_hoje else cores["texto"]),
+                        hover_color=cores["borda"],
                         border_width=(0 if eh_hoje else 1),
+                        border_color=cores["borda"],
                         command=lambda dd=d: _escolher(dd),
                     )
                     btn.grid(row=r, column=c, padx=1, pady=1)

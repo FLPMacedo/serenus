@@ -117,6 +117,7 @@ class MainWindow(ctk.CTk):
         # Itens de navegação
         itens = [
             ("🏠",  "Início",          "dashboard"),
+            ("📅",  "Agenda",          "agenda"),
             ("💰",  "Minhas Receitas", "receitas"),
             ("💸",  "Contas a Pagar",  "contas_pagar"),
             ("🛒",  "Vendas",          "vendas"),
@@ -243,9 +244,11 @@ class MainWindow(ctk.CTk):
         from views.os.os_view import OrdensServicoView
         from views.os.clientes_view import ClientesView
         from views.compras_casa.casa_view import ComprasCasaView
+        from views.agenda.agenda_view import AgendaView
 
         mapa = {
             "dashboard":      lambda p: FluxoCaixaView(p, modo_inicio=True),
+            "agenda":         lambda p: AgendaView(p),
             "contas_pagar":   lambda p: ContasPagarView(p),
             "plano_contas":   lambda p: PlanoContasView(p),
             "receitas":       lambda p: ReceitasView(p),
