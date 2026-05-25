@@ -23,6 +23,25 @@ from views.agenda.agenda_model import (
 )
 
 
+@pytest.fixture
+def banco_limpo(banco):
+    """
+    Banco com as tabelas que o agregador consome ZERADAS — útil pra testes
+    que verificam contagem exata. A fixture `banco` padrão popula dados
+    de exemplo (Salário CLT, Freela, Aluguel recebido).
+    """
+    with conectar() as conn:
+        conn.execute("DELETE FROM agenda_eventos")
+        conn.execute("DELETE FROM receitas_especiais")
+        conn.execute("DELETE FROM fontes_receita")
+        conn.execute("DELETE FROM contas_pagar")
+        try:
+            conn.execute("DELETE FROM ordens_servico")
+        except Exception:
+            pass
+    return banco
+
+
 # ---------------------------------------------------------------------------
 # Eventos avulsos — CRUD
 # ---------------------------------------------------------------------------
@@ -126,7 +145,7 @@ class TestEventoAvulsoCRUD:
 # ---------------------------------------------------------------------------
 
 class TestAgregador:
-    def test_compromissos_vazios(self, banco):
+    def test_compromissos_vazios(self, banco_limpo):
         # Banco recém criado pelo fixture deve estar VAZIO (sem dados-exemplo)
         # ou ter dados-exemplo previsíveis. Testamos só a forma.
         itens = compromissos_periodo("2099-01-01", "2099-01-31")
@@ -134,7 +153,7 @@ class TestAgregador:
         # Nada cadastrado em 2099 — esperado vazio
         assert itens == []
 
-    def test_apenas_evento_avulso(self, banco):
+    def test_apenas_evento_avulso(self, banco_limpo):
         salvar_evento({
             "titulo": "Único compromisso",
             "data": "2099-06-15",
@@ -150,7 +169,7 @@ class TestAgregador:
         assert it["valor"] is None
         assert it["concluido"] is False
 
-    def test_agregador_despesa_aparece(self, banco):
+    def test_agregador_despesa_aparece(self, banco_limpo):
         # Insere uma conta a pagar com vencimento no período
         with conectar() as conn:
             cur = conn.execute("""
@@ -170,7 +189,7 @@ class TestAgregador:
         assert it["valor"] == -1500.0   # negativo (saída)
         assert it["data"] == "2099-06-10"
 
-    def test_agregador_receita_especial(self, banco):
+    def test_agregador_receita_especial(self, banco_limpo):
         # mes=5 = Junho (0-indexed)
         with conectar() as conn:
             conn.execute("""
@@ -188,7 +207,7 @@ class TestAgregador:
         bonus = next(i for i in itens if i["titulo"] == "Bônus")
         assert bonus["valor"] == 5000.0
 
-    def test_agregador_filtro_tipos(self, banco):
+    def test_agregador_filtro_tipos(self, banco_limpo):
         salvar_evento({"titulo": "Evento X", "data": "2099-06-10"})
         with conectar() as conn:
             conn.execute("""
@@ -215,7 +234,7 @@ class TestAgregador:
                                      tipos={"despesa", "evento"})
         assert len(itens) == 2
 
-    def test_agregador_ordenado_por_data_e_hora(self, banco):
+    def test_agregador_ordenado_por_data_e_hora(self, banco_limpo):
         salvar_evento({"titulo": "B", "data": "2099-06-10", "hora": "14:00"})
         salvar_evento({"titulo": "A", "data": "2099-06-10", "hora": "08:00"})
         salvar_evento({"titulo": "C", "data": "2099-06-11"})
@@ -225,7 +244,7 @@ class TestAgregador:
         titulos = [i["titulo"] for i in itens]
         assert titulos == ["A", "B", "C"]
 
-    def test_compromissos_mes_atalho(self, banco):
+    def test_compromissos_mes_atalho(self, banco_limpo):
         salvar_evento({"titulo": "X", "data": "2099-06-15"})
         salvar_evento({"titulo": "Y", "data": "2099-07-01"})
 
@@ -233,7 +252,7 @@ class TestAgregador:
         assert len(itens) == 1
         assert itens[0]["titulo"] == "X"
 
-    def test_proximos_dias_a_partir_de_base(self, banco):
+    def test_proximos_dias_a_partir_de_base(self, banco_limpo):
         base = date(2099, 1, 1)
         salvar_evento({"titulo": "Hoje", "data": "2099-01-01"})
         salvar_evento({"titulo": "Daqui 5d", "data": "2099-01-06"})
@@ -245,7 +264,52 @@ class TestAgregador:
         assert "Daqui 5d" in titulos
         assert "Daqui 60d" not in titulos
 
-    def test_os_aparece_com_numero_formatado(self, banco):
+    def test_fonte_sem_dia_pagamento_usa_padrao(self, banco_limpo):
+        """
+        Regressão: fonte ativa com `dia_pagamento=NULL` precisa aparecer
+        na agenda. Versão anterior filtrava `IS NOT NULL` e a fonte sumia.
+        Comportamento esperado: usar dia 5 como padrão e marcar como
+        "dia previsto" no subtítulo.
+        """
+        from datetime import datetime as _dt
+        with conectar() as conn:
+            conn.execute("""
+                INSERT INTO fontes_receita
+                (nome, tipo, valor_mensal, ativa, periodicidade, dia_pagamento, criado_em)
+                VALUES (?, ?, ?, 1, 'mensal', NULL, ?)
+            """, ("Freela X", "freela", 2000.0,
+                  _dt.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        itens = compromissos_periodo("2099-06-01", "2099-06-30",
+                                     tipos={"receita"})
+        assert len(itens) == 1
+        it = itens[0]
+        assert it["titulo"] == "Freela X"
+        assert it["data"] == "2099-06-05"   # padrão = dia 5
+        assert "previsto" in it["subtitulo"].lower()
+        assert it["valor"] == 2000.0
+
+    def test_fonte_dia_invalido_usa_ultimo_dia_do_mes(self, banco_limpo):
+        """
+        Fonte com dia_pagamento=31 cadastrado deve aparecer em Fevereiro
+        no dia 28/29 (último dia do mês), não sumir.
+        """
+        from datetime import datetime as _dt
+        with conectar() as conn:
+            conn.execute("""
+                INSERT INTO fontes_receita
+                (nome, tipo, valor_mensal, ativa, periodicidade, dia_pagamento, criado_em)
+                VALUES (?, ?, ?, 1, 'mensal', 31, ?)
+            """, ("Salário", "clt", 5000.0,
+                  _dt.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        # 2099 não-bissexto — fevereiro tem 28 dias
+        itens = compromissos_periodo("2099-02-01", "2099-02-28",
+                                     tipos={"receita"})
+        assert len(itens) == 1
+        assert itens[0]["data"] == "2099-02-28"
+
+    def test_os_aparece_com_numero_formatado(self, banco_limpo):
         """
         Regressão: o campo `numero` de ordens_servico é TEXT já formatado
         ("OS-0003"), não int. Versão anterior fazia int(d['numero']) e

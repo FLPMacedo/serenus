@@ -217,18 +217,26 @@ def _receitas_especiais_periodo(conn, data_ini: str, data_fim: str) -> list[dict
     return out
 
 
+DIA_PAGAMENTO_PADRAO = 5  # fallback quando a fonte não tem dia_pagamento
+
+
 def _receitas_fontes_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
     """
-    Fontes de receita ativas com dia_pagamento definido — geram uma entrada
-    por mês no período.
+    Fontes de receita ativas — geram uma entrada por mês no período.
+
+    Se a fonte não tem `dia_pagamento` configurado, usa dia 5 como padrão
+    (típico de salário/freela no Brasil) e marca no subtítulo como
+    "dia previsto" pra deixar claro pro usuário que pode editar a fonte
+    pra definir o dia real.
     """
     rows = conn.execute("""
         SELECT id, nome, tipo, valor_mensal, dia_pagamento, periodicidade
         FROM fontes_receita
-        WHERE ativa = 1 AND dia_pagamento IS NOT NULL
+        WHERE ativa = 1
     """).fetchall()
     if not rows:
         return []
+    import calendar as _cal
     di = datetime.strptime(data_ini, "%Y-%m-%d").date()
     df = datetime.strptime(data_fim, "%Y-%m-%d").date()
     out = []
@@ -243,20 +251,33 @@ def _receitas_fontes_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
             if periodicidade == "anual" and mes != di.month:
                 # Só no mês inicial do range
                 continue
-            dia = int(d["dia_pagamento"])
+
+            dia_pag = d.get("dia_pagamento")
+            estimado = dia_pag is None
+            dia = int(dia_pag) if dia_pag is not None else DIA_PAGAMENTO_PADRAO
+            # Se o dia configurado não existe no mês (ex: 31 em fevereiro),
+            # usa o último dia do mês — mais útil que pular silenciosamente.
+            ultimo_dia = _cal.monthrange(ano, mes)[1]
+            if dia > ultimo_dia:
+                dia = ultimo_dia
             try:
                 data_evt = date(ano, mes, dia)
             except ValueError:
-                # Dia 31 em mês de 30, etc — pula
                 continue
             if data_evt < di or data_evt > df:
                 continue
+
+            tipo = d.get("tipo") or "receita"
+            sub = f"Fonte ({tipo})"
+            if estimado:
+                sub += " — dia previsto"
+
             out.append({
                 "tipo":      "receita",
                 "data":      data_evt.isoformat(),
                 "hora":      "",
                 "titulo":    d["nome"],
-                "subtitulo": f"Fonte ({d.get('tipo') or 'receita'})",
+                "subtitulo": sub,
                 "valor":     float(d["valor_mensal"] or 0.0),
                 "ref_id":    d["id"],
                 "concluido": False,
