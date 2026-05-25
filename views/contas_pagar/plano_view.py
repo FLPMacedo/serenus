@@ -63,16 +63,17 @@ class PlanoContasView(ctk.CTkFrame):
                 "Suas categorias personalizadas e lançamentos existentes "
                 "não são alterados.")
 
-        ctk.CTkButton(header, text="+ Nova conta", height=32,
-                      command=self._abrir_form_novo).grid(row=0, column=2, sticky="e")
-
         # Filtro ativas/inativas
         self._mostrar_inativas = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             header, text="Mostrar inativas",
             variable=self._mostrar_inativas,
             command=self._carregar,
-        ).grid(row=0, column=2, padx=12, sticky="e")
+        ).grid(row=0, column=2, padx=(0, 12), sticky="e")
+
+        # Ação primária (canto direito)
+        ctk.CTkButton(header, text="+ Nova conta", height=32,
+                      command=self._abrir_form_novo).grid(row=0, column=3, sticky="e")
 
     def _build_tabela(self):
         cores = self._cores
@@ -189,9 +190,10 @@ class PlanoContasView(ctk.CTkFrame):
         if tem_lancamentos_plano(plano.id):
             dlg = ctk.CTkToplevel(self)
             dlg.title("Exclusão bloqueada")
-            dlg.geometry("340x150")
+            # BUGFIX (geometria): altura 150 cortava o botão OK em DPI alto.
+            dlg.geometry("380x220")
             dlg.grab_set()
-            dlg.resizable(False, False)
+            dlg.resizable(True, True)
             ctk.CTkLabel(dlg, text=f'Não é possível excluir "{plano.nome}"',
                          font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(20, 4))
             ctk.CTkLabel(dlg, text="Esta conta possui lançamentos vinculados.\nInative-a em vez de excluir.",
@@ -201,9 +203,11 @@ class PlanoContasView(ctk.CTkFrame):
             return
         dlg = ctk.CTkToplevel(self)
         dlg.title("Confirmar exclusão")
-        dlg.geometry("320x140")
+        # BUGFIX (geometria): mesmo problema do diálogo de excluir despesa —
+        # 140px cortava os botões. Aumentado pra 220 e liberado o resize.
+        dlg.geometry("340x220")
         dlg.grab_set()
-        dlg.resizable(False, False)
+        dlg.resizable(True, True)
         ctk.CTkLabel(dlg, text=f'Excluir "{plano.nome}"?',
                      font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(20, 4))
         ctk.CTkLabel(dlg, text="Esta ação não pode ser desfeita.",

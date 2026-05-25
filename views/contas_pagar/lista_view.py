@@ -311,9 +311,12 @@ class ContasPagarView(ctk.CTkFrame):
         cores = self._cores
         dlg = ctk.CTkToplevel(self)
         dlg.title("Confirmar exclusão")
-        dlg.geometry("320x140")
+        # BUGFIX: 140px era insuficiente — botões Cancelar/Excluir ficavam
+        # cortados fora da área visível em DPI alto. Aumentado pra 220 e
+        # liberado o resize.
+        dlg.geometry("340x220")
         dlg.grab_set()
-        dlg.resizable(False, False)
+        dlg.resizable(True, True)
         ctk.CTkLabel(dlg, text="Excluir esta despesa?",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(pady=(20, 4))
         ctk.CTkLabel(dlg, text="Esta ação não pode ser desfeita.",
