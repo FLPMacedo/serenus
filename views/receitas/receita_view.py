@@ -898,8 +898,11 @@ class EspecialFormModal(ctk.CTkToplevel):
 
         titulo = "Editar Receita Especial" if especial else "Nova Receita Especial"
         self.title(f"Serenus — {titulo}")
-        self.geometry("420x360")
-        self.resizable(False, False)
+        # BUGFIX: altura 360 cortava os botões Cancelar/Salvar fora da área
+        # visível (especialmente em DPI alto). Aumentada pra 480 + resizable
+        # pra cobrir todos os displays.
+        self.geometry("440x480")
+        self.resizable(True, True)
         self.grab_set()
         self.bind("<Escape>", lambda e: self.destroy())
         self._build_ui()
@@ -988,11 +991,13 @@ class EspecialFormModal(ctk.CTkToplevel):
         val_str = self._entry_valor.get().replace(".", "").replace(",", ".").strip()
         try:
             valor = float(val_str)
-            if valor <= 0:
+            # Permitido valor=0 (entrada pendente, user vai preencher depois).
+            # Só rejeita NEGATIVO.
+            if valor < 0:
                 raise ValueError
         except ValueError:
             self._entry_valor.configure(border_color="#DC2626")
-            self._lbl_err_valor.configure(text="Informe um valor maior que zero.")
+            self._lbl_err_valor.configure(text="Valor inválido (use 0,00 ou positivo).")
             return
 
         dados = {
