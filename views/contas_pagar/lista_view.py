@@ -209,16 +209,26 @@ class ContasPagarView(ctk.CTkFrame):
         cores = self._cores
         hoje_iso = date.today().isoformat()
 
+        # Estorno = valor negativo (ex.: crédito importado de fatura de cartão).
+        # Não é receita; é despesa que deixou de sair. Sinalizamos com cor de
+        # fundo distinta, status "↩ Estorno" e ocultamos o botão "✓ Pago".
+        eh_estorno = conta.valor < 0
+        tema_claro = obter_configuracao("tema", "claro") == "claro"
+
         # Cor de fundo da linha
-        if conta.status == "pago":
-            bg = "#D1FAE5" if obter_configuracao("tema", "claro") == "claro" else "#064E3B"
+        if eh_estorno:
+            bg = "#CFFAFE" if tema_claro else "#164E63"
+        elif conta.status == "pago":
+            bg = "#D1FAE5" if tema_claro else "#064E3B"
         elif conta.status == "pendente" and conta.data_vencimento < hoje_iso:
-            bg = "#FEE2E2" if obter_configuracao("tema", "claro") == "claro" else "#7F1D1D"
+            bg = "#FEE2E2" if tema_claro else "#7F1D1D"
         else:
             bg = cores["card"]
 
         row_frame = ctk.CTkFrame(self._scroll, fg_color=bg, corner_radius=6)
         row_frame.pack(fill="x", pady=2)
+
+        status_texto = "↩ Estorno" if eh_estorno else conta.status.capitalize()
 
         valores = [
             (conta.plano_nome or "—",            COLUNAS[0][1]),
@@ -226,7 +236,7 @@ class ContasPagarView(ctk.CTkFrame):
             (LABEL_TIPO_CUSTO.get(conta.plano_tipo, "—"), COLUNAS[2][1]),
             (formatar_moeda(conta.valor),         COLUNAS[3][1]),
             (formatar_data_exibicao(conta.data_vencimento), COLUNAS[4][1]),
-            (conta.status.capitalize(),           COLUNAS[5][1]),
+            (status_texto,                       COLUNAS[5][1]),
         ]
 
         for i, (texto, larg) in enumerate(valores):
@@ -239,7 +249,8 @@ class ContasPagarView(ctk.CTkFrame):
         acoes = ctk.CTkFrame(row_frame, fg_color="transparent")
         acoes.grid(row=0, column=6, padx=4)
 
-        if conta.status == "pendente":
+        # "✓ Pago" só pra débitos pendentes — estorno já está aplicado na fatura
+        if conta.status == "pendente" and not eh_estorno:
             ctk.CTkButton(
                 acoes, text="✓ Pago", width=60, height=24,
                 fg_color=cores["positivo"], hover_color="#15803D",
@@ -293,6 +304,11 @@ class ContasPagarView(ctk.CTkFrame):
         self._toast("Despesa marcada como paga.")
 
     def _confirmar_excluir(self, id: int):
+        # BUGFIX: este método usava `cores[...]` (bare) sem definir `cores`
+        # localmente, dando NameError ao clicar em "Excluir despesa" e
+        # impedindo o usuário de remover. Definido `cores = self._cores`
+        # como nos demais métodos da classe (_build_header, _linha, _toast).
+        cores = self._cores
         dlg = ctk.CTkToplevel(self)
         dlg.title("Confirmar exclusão")
         dlg.geometry("320x140")
@@ -301,7 +317,7 @@ class ContasPagarView(ctk.CTkFrame):
         ctk.CTkLabel(dlg, text="Excluir esta despesa?",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(pady=(20, 4))
         ctk.CTkLabel(dlg, text="Esta ação não pode ser desfeita.",
-                     text_color=self._cores["texto_mudo"]).pack()
+                     text_color=cores["texto_mudo"]).pack()
         btns = ctk.CTkFrame(dlg, fg_color="transparent")
         btns.pack(pady=16)
         ctk.CTkButton(btns, text="Cancelar", width=100,
@@ -310,7 +326,7 @@ class ContasPagarView(ctk.CTkFrame):
                       text_color=cores["texto"],
                       command=dlg.destroy).pack(side="left", padx=8)
         ctk.CTkButton(btns, text="Excluir", width=100,
-                      fg_color=self._cores["alerta"],
+                      fg_color=cores["alerta"],
                       command=lambda: self._excluir(id, dlg)).pack(side="left", padx=8)
 
     def _excluir(self, id: int, dlg):
