@@ -245,6 +245,31 @@ class TestAgregador:
         assert "Daqui 5d" in titulos
         assert "Daqui 60d" not in titulos
 
+    def test_os_aparece_com_numero_formatado(self, banco):
+        """
+        Regressão: o campo `numero` de ordens_servico é TEXT já formatado
+        ("OS-0003"), não int. Versão anterior fazia int(d['numero']) e
+        explodia com 'invalid literal for int() with base 10: OS-0003'.
+        """
+        from datetime import datetime as _dt
+        with conectar() as conn:
+            conn.execute("""
+                INSERT INTO ordens_servico
+                (numero, solicitante_nome, data_solicitacao,
+                 data_execucao, status, criado_em)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, ("OS-0003", "João da Silva", "2099-06-01",
+                  "2099-06-10", "aberta",
+                  _dt.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        itens = compromissos_periodo("2099-06-01", "2099-06-30",
+                                     tipos={"os"})
+        assert len(itens) == 1
+        assert itens[0]["tipo"] == "os"
+        assert itens[0]["titulo"] == "OS-0003"
+        assert itens[0]["data"] == "2099-06-10"
+        assert itens[0]["concluido"] is False
+
     def test_agrupar_por_dia(self, banco):
         items = [
             {"data": "2099-06-10", "titulo": "A"},

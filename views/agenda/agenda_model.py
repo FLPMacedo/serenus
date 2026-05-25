@@ -287,11 +287,12 @@ def _os_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
     out = []
     for r in rows:
         d = dict(r)
+        # numero é TEXT ("OS-0003") — usa direto, sem reformatar
         out.append({
             "tipo":      "os",
             "data":      d["data_execucao"],
             "hora":      d.get("hora_execucao") or "",
-            "titulo":    f"OS-{int(d['numero']):04d}",
+            "titulo":    str(d["numero"]),
             "subtitulo": (d.get("descricao_servico") or "")[:80]
                           or d.get("solicitante_nome") or "",
             "valor":     None,
