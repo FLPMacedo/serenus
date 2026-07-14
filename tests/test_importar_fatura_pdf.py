@@ -57,6 +57,16 @@ _SKIP_MSG = (
     "(sem senha, 4 itens). Teste volta a rodar quando o original retornar."
 )
 
+# Os PDFs reais são pessoais e ficam fora do git (faturas_modelos/ está no
+# .gitignore). Num checkout limpo a pasta não existe — os testes que dependem
+# dos PDFs devem PULAR, não falhar. Os testes baseados em texto continuam
+# rodando normalmente.
+requer_pdfs = pytest.mark.skipif(
+    not _PDF_NUBANK.exists(),
+    reason="faturas_modelos/ ausente (PDFs pessoais, fora do git) — "
+           "testes com PDF real pulados",
+)
+
 # Lista de PDFs novos disponíveis para a revisão de parsers que o usuário
 # vai pedir em momento oportuno. Mantidos aqui pra referência rápida.
 # A coluna XLSX indica se já existe saída anterior do pipeline PDF→XLSX
@@ -80,6 +90,7 @@ _SKIP_MSG = (
 # Etapa 1 — Detecção de senha
 # ---------------------------------------------------------------------------
 
+@requer_pdfs
 class TestPdfTemSenha:
     def test_nubank_sem_senha(self):
         from views.cartoes.importar_fatura_pdf_model import pdf_tem_senha
@@ -120,6 +131,7 @@ class TestPdfTemSenha:
 # Etapa 1 — Extração de texto
 # ---------------------------------------------------------------------------
 
+@requer_pdfs
 class TestExtrairTextoPdf:
     def test_nubank_extrai_texto_sem_senha(self):
         from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
@@ -316,6 +328,7 @@ class TestGenericoParser:
         valores = sorted(i["valor"] for i in itens)
         assert valores == [39.90, 45.80, 120.00]
 
+    @requer_pdfs
     def test_generico_em_pdf_real_extrai_algo(self):
         """Sanity: rodar o genérico no PDF do Nubank deve achar pelo menos
         algumas linhas (mesmo que não seja o parser ideal pra esse layout)."""
@@ -332,6 +345,7 @@ class TestGenericoParser:
 # Etapa 3 — Parser Nubank
 # ---------------------------------------------------------------------------
 
+@requer_pdfs
 class TestNubankParser:
     def test_reconhece_pdf_nubank_real(self):
         from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
@@ -416,6 +430,7 @@ class TestNubankParser:
 # Etapa 4 — Parser Itaú (VISA + MASTERCARD)
 # ---------------------------------------------------------------------------
 
+@requer_pdfs
 class TestItauParser:
     def test_reconhece_visa(self):
         from views.cartoes.importar_fatura_pdf_model import extrair_texto_pdf
@@ -585,6 +600,7 @@ class TestOcrFallback:
 # Etapa 5 — Pipeline pdf_para_linhas + salvar_como_xlsx + equivalência
 # ---------------------------------------------------------------------------
 
+@requer_pdfs
 class TestPdfParaLinhas:
     def test_nubank_pipeline_completo(self):
         from views.cartoes.importar_fatura_pdf_model import pdf_para_linhas
@@ -629,6 +645,7 @@ class TestPdfParaLinhas:
         assert meta["ocr_usado"] is False
 
 
+@requer_pdfs
 class TestSalvarComoXlsx:
     def test_gera_arquivo_xlsx(self, tmp_path):
         from views.cartoes.importar_fatura_pdf_model import (
