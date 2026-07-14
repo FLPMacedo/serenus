@@ -1033,6 +1033,14 @@ def zerar_dados():
             DELETE FROM compras_cartao;
             DELETE FROM cartoes;
             DELETE FROM juros_cheque_especial;
+            -- Filhas de plano_contas/fontes_receita/contas_pagar: apagar ANTES
+            -- das pais (foreign_keys=ON faria o DELETE das pais falhar).
+            DELETE FROM lancamentos_banco;
+            DELETE FROM contas_banco;
+            DELETE FROM regras_categoria;
+            DELETE FROM lancamentos_manuais;
+            DELETE FROM agenda_eventos;
+            DELETE FROM metas_financeiras;
             DELETE FROM contas_pagar;
             DELETE FROM plano_contas;
             DELETE FROM fontes_receita;
