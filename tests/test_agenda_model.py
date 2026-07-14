@@ -309,6 +309,46 @@ class TestAgregador:
         assert len(itens) == 1
         assert itens[0]["data"] == "2099-02-28"
 
+    def test_fonte_bimestral_rateia_valor(self, banco_limpo):
+        """
+        Fontes bimestrais/anuais seguem a convenção do resto do app:
+        valor rateado por mês (÷2 / ÷12). Antes, a fonte anual aparecia
+        em TODO mês visualizado com o valor cheio (o filtro ancorava no
+        mês inicial do range — que na visão mensal é o próprio mês).
+        """
+        from datetime import datetime as _dt
+        with conectar() as conn:
+            conn.execute("""
+                INSERT INTO fontes_receita
+                (nome, tipo, valor_mensal, ativa, periodicidade, dia_pagamento, criado_em)
+                VALUES (?, ?, ?, 1, 'bimestral', 10, ?)
+            """, ("Aluguel bimestral", "aluguel", 2000.0,
+                  _dt.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        itens = compromissos_periodo("2099-06-01", "2099-06-30",
+                                     tipos={"receita"})
+        assert len(itens) == 1
+        assert itens[0]["valor"] == 1000.0          # 2000 / 2
+        assert "média mensal" in itens[0]["subtitulo"]
+
+    def test_fonte_anual_rateia_valor_e_aparece_todo_mes(self, banco_limpo):
+        from datetime import datetime as _dt
+        with conectar() as conn:
+            conn.execute("""
+                INSERT INTO fontes_receita
+                (nome, tipo, valor_mensal, ativa, periodicidade, dia_pagamento, criado_em)
+                VALUES (?, ?, ?, 1, 'anual', 15, ?)
+            """, ("Dividendo anual", "dividendos", 12000.0,
+                  _dt.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        # Igual às outras telas: média mensal em qualquer mês consultado
+        for mes_ini, mes_fim in [("2099-03-01", "2099-03-31"),
+                                 ("2099-08-01", "2099-08-31")]:
+            itens = compromissos_periodo(mes_ini, mes_fim, tipos={"receita"})
+            assert len(itens) == 1
+            assert itens[0]["valor"] == 1000.0      # 12000 / 12
+            assert "média mensal" in itens[0]["subtitulo"]
+
     def test_os_aparece_com_numero_formatado(self, banco_limpo):
         """
         Regressão: o campo `numero` de ordens_servico é TEXT já formatado

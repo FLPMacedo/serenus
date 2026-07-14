@@ -228,6 +228,11 @@ def _receitas_fontes_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
     (típico de salário/freela no Brasil) e marca no subtítulo como
     "dia previsto" pra deixar claro pro usuário que pode editar a fonte
     pra definir o dia real.
+
+    Fontes bimestrais/anuais seguem a MESMA convenção do resto do app
+    (Receitas, Projeção, Fluxo de Caixa): o valor é rateado por mês
+    (÷2 / ÷12) — não há mês-âncora cadastrado pra saber em qual mês o
+    pagamento realmente cai. O subtítulo marca "média mensal".
     """
     rows = conn.execute("""
         SELECT id, nome, tipo, valor_mensal, dia_pagamento, periodicidade
@@ -244,13 +249,12 @@ def _receitas_fontes_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
     while (ano, mes) <= (df.year, df.month):
         for r in rows:
             d = dict(r)
-            # Filtra por periodicidade
             periodicidade = d.get("periodicidade") or "mensal"
-            if periodicidade == "bimestral" and (mes % 2) != (di.month % 2):
-                continue
-            if periodicidade == "anual" and mes != di.month:
-                # Só no mês inicial do range
-                continue
+            valor = float(d["valor_mensal"] or 0.0)
+            if periodicidade == "bimestral":
+                valor /= 2
+            elif periodicidade == "anual":
+                valor /= 12
 
             dia_pag = d.get("dia_pagamento")
             estimado = dia_pag is None
@@ -269,6 +273,8 @@ def _receitas_fontes_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
 
             tipo = d.get("tipo") or "receita"
             sub = f"Fonte ({tipo})"
+            if periodicidade != "mensal":
+                sub += f" — média mensal ({periodicidade})"
             if estimado:
                 sub += " — dia previsto"
 
@@ -278,7 +284,7 @@ def _receitas_fontes_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
                 "hora":      "",
                 "titulo":    d["nome"],
                 "subtitulo": sub,
-                "valor":     float(d["valor_mensal"] or 0.0),
+                "valor":     valor,
                 "ref_id":    d["id"],
                 "concluido": False,
                 "cor":       COR_RECEITA,
