@@ -189,6 +189,21 @@ class TestAgregador:
         assert it["valor"] == -1500.0   # negativo (saída)
         assert it["data"] == "2099-06-10"
 
+    def test_despesa_cancelada_nao_aparece(self, banco_limpo):
+        """Convenção do app (fluxo, extrato, projeção): status='cancelado'
+        fica fora — a Agenda não pode mostrar despesa cancelada."""
+        with conectar() as conn:
+            conn.execute("""
+                INSERT INTO contas_pagar
+                (descricao, valor, data_vencimento, status, criado_em)
+                VALUES (?, ?, ?, ?, ?)
+            """, ("Assinatura cancelada", 99.0, "2099-06-10", "cancelado",
+                  datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        itens = compromissos_periodo("2099-06-01", "2099-06-30",
+                                     tipos={"despesa"})
+        assert itens == []
+
     def test_agregador_receita_especial(self, banco_limpo):
         # mes=5 = Junho (0-indexed)
         with conectar() as conn:

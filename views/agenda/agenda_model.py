@@ -151,6 +151,7 @@ def _despesas_periodo(conn, data_ini: str, data_fim: str) -> list[dict]:
         FROM contas_pagar cp
         LEFT JOIN plano_contas pc ON pc.id = cp.plano_conta_id
         WHERE cp.data_vencimento BETWEEN ? AND ?
+          AND cp.status != 'cancelado'
         ORDER BY cp.data_vencimento, cp.descricao
     """, (data_ini, data_fim)).fetchall()
     out = []
